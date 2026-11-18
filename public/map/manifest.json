@@ -2,122 +2,122 @@
   "tree-round": {
     "w": 255,
     "h": 256,
-    "bytes": 14144
+    "bytes": 14470
   },
   "tree-round-dark": {
     "w": 255,
     "h": 256,
-    "bytes": 13134
+    "bytes": 13348
   },
   "oak": {
     "w": 256,
     "h": 243,
-    "bytes": 14780
+    "bytes": 14976
   },
   "bush": {
     "w": 256,
     "h": 254,
-    "bytes": 15144
+    "bytes": 15714
   },
   "palm": {
     "w": 238,
     "h": 256,
-    "bytes": 15892
+    "bytes": 16092
   },
   "palm-2": {
     "w": 255,
     "h": 256,
-    "bytes": 15360
+    "bytes": 15546
   },
   "pine": {
-    "w": 197,
+    "w": 247,
     "h": 256,
-    "bytes": 14344
+    "bytes": 18882
   },
   "pine-2": {
-    "w": 256,
-    "h": 206,
-    "bytes": 13364
+    "w": 246,
+    "h": 256,
+    "bytes": 17944
   },
   "bushes": {
     "w": 256,
     "h": 234,
-    "bytes": 17474
+    "bytes": 17770
   },
   "hedge": {
     "w": 256,
     "h": 114,
-    "bytes": 12578
+    "bytes": 12638
   },
   "flowers": {
     "w": 256,
     "h": 183,
-    "bytes": 19632
+    "bytes": 19860
   },
   "rocks": {
     "w": 256,
-    "h": 179,
-    "bytes": 8336
+    "h": 227,
+    "bytes": 10520
   },
   "house": {
     "w": 227,
     "h": 256,
-    "bytes": 7710
+    "bytes": 7740
   },
   "house-square": {
     "w": 223,
     "h": 256,
-    "bytes": 13552
+    "bytes": 13474
   },
   "house-l": {
     "w": 215,
     "h": 256,
-    "bytes": 12918
+    "bytes": 12706
   },
   "house-long": {
     "w": 216,
     "h": 256,
-    "bytes": 15996
+    "bytes": 16228
   },
   "church": {
-    "w": 139,
+    "w": 163,
     "h": 256,
-    "bytes": 9850
+    "bytes": 12172
   },
   "umbrella-coral": {
     "w": 256,
     "h": 256,
-    "bytes": 12756
+    "bytes": 12830
   },
   "umbrella-teal": {
     "w": 256,
     "h": 255,
-    "bytes": 13042
+    "bytes": 13158
   },
   "sailboat": {
     "w": 120,
     "h": 256,
-    "bytes": 11118
+    "bytes": 11156
   },
   "rowboat": {
     "w": 114,
     "h": 256,
-    "bytes": 12114
+    "bytes": 12078
   },
   "bridge": {
     "w": 256,
     "h": 243,
-    "bytes": 13022
+    "bytes": 13090
   },
   "stand": {
     "w": 256,
     "h": 230,
-    "bytes": 15888
+    "bytes": 16032
   },
   "fence": {
     "w": 256,
     "h": 115,
-    "bytes": 8710
+    "bytes": 8810
   },
   "grass": {
     "w": 512,

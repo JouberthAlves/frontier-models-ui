@@ -24,14 +24,15 @@
   --seam-x: linear-gradient(90deg, #ffb76b, #80e9f2);
   --off-arena: #8fa5bf;
 
-  /* v2 map: pastel top-down scenery (spec-v2 §3.1) */
-  --map-grass: #b9dca0;
-  --map-grass-2: #a9d18e;
-  --map-grass-dark: #8fc07a;
-  --map-sand: #f3dfb8;
-  --map-sand-2: #ead09f;
-  --map-sea: #8fd3df;
-  --map-sea-deep: #6fc2d3;
+  /* v2 map (spec-v2 §3.1). Ground and pieces are textures and sprites (public/map): the ground
+     tokens match their average color; roof/wall/tree/rock/wood are no longer drawn from tokens. */
+  --map-grass: #accb6b;
+  --map-grass-2: #9cc25c;
+  --map-grass-dark: #6fa548;
+  --map-sand: #f9dc9a;
+  --map-sand-2: #e9c684;
+  --map-sea: #4cc7bf;
+  --map-sea-deep: #2a9fb0;
   --map-foam: #ffffff;
   --map-roof: #e9a27f;
   --map-roof-2: #d98a68;
@@ -42,10 +43,10 @@
   --map-rock: #c9c1b4;
   --map-water: #9fd6e3;
   --map-wood: #c79a6b;
-  --map-asphalt: #6d7486;
-  --map-kerb-red: #e8786f;
+  --map-asphalt: #5f6677;
+  --map-kerb-red: #e35d52;
   --map-kerb-white: #fbf7ef;
-  --map-shadow: rgba(40, 52, 40, 0.16);
+  --map-shadow: rgba(24, 40, 24, 0.13);
   --card-cream: #fff8ef;
   --card-line: #ecdcc6;
   --ink-navy: #0f1a2b;

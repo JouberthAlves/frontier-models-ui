@@ -7,22 +7,25 @@
  *     the winding stream;
  *  2. the village: houses of varied size and turn packed around a sand plaza with the church,
  *     curved streets, gardens and trees in the lots, a fence around it, a few houses outside it;
- *  3. hedges along the road in places, clearings (some with a crop field);
- *  4. pieces: big single trees, groves, woods and palm clusters first (composite symbols: one
+ *  3. hedges along the road in places, clearings;
+ *  4. pieces (illustrated sprites, see sceneryKit.ts): big single trees, groves, woods and palm clusters first (composite symbols: one
  *     element draws 3 to 7 trees), then single pieces in the room that is left. Both by seeded dart throwing per
  *     400 px band (a block that grows only reshuffles the bands it touches), away from the
  *     content blocks, the hero text, the road and the water.
  *
+ * The soft shadows under the pieces are one shared path (two stacked fills, no filter), built here
+ * from where each sprite touches the ground.
+ *
  * To get a different map, change SCENERY_SEED. To change what grows where, edit `ZONES`.
  */
-import { FOOT, type PieceId } from './sceneryKit';
+import { FOOT, KIT_PARTS, SPRITES, type PieceId } from './sceneryKit';
 import { ROAD_TAIL, type BlockRect, type Track } from './track';
 
 export type { PieceId } from './sceneryKit';
 
 export const SCENERY_SEED = 20261118;
 /** Whole map SVG must stay under 650 elements (spec-v2 §9): this caps the placed pieces. */
-export const MAX_PIECES = 310;
+export const MAX_PIECES = 300;
 const BAND = 400;
 const NAV_H = 64;
 
@@ -43,7 +46,7 @@ export interface Piece {
   y: number;
   /** Scale. */
   s: number;
-  /** Rotation in degrees (only pieces without a baked shadow rotate). */
+  /** Rotation in degrees. Houses and the church stay upright (front wall at the bottom). */
   r: number;
   /** Footprint radius on the map (already scaled). */
   rad: number;
@@ -74,14 +77,17 @@ export interface Scenery {
   patches: string[];
   /** Cliff step: the face (filled), the shaded band along its foot, a rock seam, and its top lip. */
   cliff: { face: string; foot: string; strata: string; lip: string } | null;
-  /** Plaza (a filled blob), dirt streets (stroked) and the fence around the cluster. */
-  village: { plaza: string; streets: string; streetWidth: number; fence: string } | null;
+  /** Plaza (a filled blob) and dirt streets (stroked). The fence is made of pieces. */
+  village: { plaza: string; streets: string; streetWidth: number } | null;
   /** Stream: the water (filled, its width varies), the deeper middle, flow dashes, bank stones. */
   river: { water: string; deep: string; deepWidth: number; flow: string; stones: string } | null;
   bridge: { x: number; y: number; angle: number; w: number; len: number } | null;
-  /** Rows of clipped bushes along the road (one path of circles). */
-  hedges: string;
-  stand: { x: number; y: number; w: number; h: number };
+  /** Grandstand: `tiles` sprites of `w` × `tileH` stacked down the page. */
+  stand: { x: number; y: number; w: number; h: number; tiles: number; tileH: number };
+  /** Soft ground shadows of all the pieces: a wide faint layer and a tighter one, body and last stretch. */
+  shadows: { soft: string; core: string; tailSoft: string; tailCore: string };
+  /** The hero text and buttons as one box: a light wash goes behind them. */
+  calmBox: Rect | null;
   moon: { x: number; y: number; r: number };
   stars: { d: string; o: number }[];
   pieces: Piece[];
@@ -123,7 +129,7 @@ const ZONES: Zone[] = [
     until: 0.22,
     big: [['oak', 14], ['grove-b', 28], ['grove-c', 18], ['palms-a', 18], ['grove-a', 28]],
     bigGap: 58,
-    small: [['tree', 26], ['tree2', 20], ['palm', 16], ['bush', 18], ['rock', 10], ['flowers', 8]],
+    small: [['tree', 26], ['tree2', 20], ['palm', 16], ['bush', 12], ['bushes', 8], ['rock', 10], ['flowers', 8]],
     smallGap: 96,
     pack: 0.96
   },
@@ -132,7 +138,7 @@ const ZONES: Zone[] = [
     until: 0.42,
     big: [['oak', 20], ['grove-a', 38], ['grove-b', 26], ['grove-c', 16], ['woods-c', 8]],
     bigGap: 54,
-    small: [['tree', 30], ['tree2', 24], ['bush', 16], ['rock', 8], ['rock2', 8], ['flowers', 8], ['pine', 6]],
+    small: [['tree', 30], ['tree2', 24], ['bush', 10], ['bushes', 8], ['rock', 8], ['rock2', 8], ['flowers', 8], ['pine', 6]],
     smallGap: 96,
     pack: 0.94
   },
@@ -142,7 +148,7 @@ const ZONES: Zone[] = [
     big: [['oak', 18], ['grove-a', 34], ['grove-b', 28], ['grove-c', 20], ['woods-c', 8]],
     bigGap: 56,
     // No houses here: they only stand in the village and on its outskirts.
-    small: [['tree', 30], ['tree2', 24], ['bush', 18], ['flowers', 18], ['rock', 6], ['pine', 4]],
+    small: [['tree', 30], ['tree2', 24], ['bush', 10], ['bushes', 8], ['flowers', 18], ['rock', 6], ['pine', 4]],
     smallGap: 96,
     pack: 0.94
   },
@@ -151,7 +157,7 @@ const ZONES: Zone[] = [
     until: 0.9,
     big: [['oak-d', 16], ['woods-a', 50], ['woods-b', 28], ['woods-c', 10]],
     bigGap: 30,
-    small: [['dense', 44], ['pine', 36], ['tree2', 14], ['bush', 6]],
+    small: [['dense', 44], ['pine', 22], ['pine2', 16], ['tree2', 12], ['bushes', 6]],
     smallGap: 44,
     pack: 0.62
   },
@@ -160,7 +166,7 @@ const ZONES: Zone[] = [
     until: 2,
     big: [['oak-d', 20], ['woods-c', 42], ['grove-c', 42]],
     bigGap: 110,
-    small: [['bush', 40], ['pine', 30], ['tree2', 30]],
+    small: [['bushes', 40], ['pine', 16], ['pine2', 14], ['tree2', 30]],
     smallGap: 104,
     pack: 1.1
   }
@@ -177,10 +183,34 @@ const SAND: Zone = {
 
 /** Big single trees: placed with the groves, at 1 to 1.6 of their size. */
 const LANDMARK = new Set<PieceId>(['oak', 'oak-d']);
-/** Trees whose size varies the most (0.7 to 1.6). */
-const SINGLE_TREE = new Set<PieceId>(['tree', 'tree2', 'pine', 'dense', 'palm', 'palm2', 'bush']);
+/** Trees whose size varies the most (0.85 to 1.6). */
+const SINGLE_TREE = new Set<PieceId>(['tree', 'tree2', 'pine', 'pine2', 'dense', 'palm', 'palm2', 'bush', 'bushes']);
 /** Low things that may grow in a clearing. */
-const GROUND_COVER = new Set<PieceId>(['flowers', 'bush', 'rock', 'rock2']);
+const GROUND_COVER = new Set<PieceId>(['flowers', 'bush', 'bushes', 'rock', 'rock2']);
+/**
+ * Sprites lit evenly enough to face any way. The round canopies (and the groves made of them)
+ * have a lit side, so they only lean a little; buildings never turn.
+ */
+const FREE_TURN = new Set<PieceId>([
+  'palm',
+  'palm2',
+  'pine',
+  'pine2',
+  'bush',
+  'bushes',
+  'rock',
+  'rock2',
+  'umbrella',
+  'umbrella2',
+  'flowers',
+  'palms-a',
+  'palms-b'
+]);
+/** Turn of a piece from two numbers it already drew (no extra draw: the stream stays aligned). */
+const turnOf = (id: PieceId, u: number, v: number) => {
+  const t = (u * 977 + v * 613) % 1;
+  return FREE_TURN.has(id) ? Math.round(t * 360) : Math.round((t - 0.5) * 44);
+};
 
 function pick(list: Mix, u: number): PieceId {
   const total = list.reduce((sum, item) => sum + item[1], 0);
@@ -201,6 +231,14 @@ const smooth = (t: number) => {
 };
 const circlePath = (cx: number, cy: number, r: number) =>
   `M${fmt(cx - r)} ${fmt(cy)}a${fmt(r)} ${fmt(r)} 0 1 0 ${fmt(r * 2)} 0a${fmt(r)} ${fmt(r)} 0 1 0 ${fmt(-r * 2)} 0Z`;
+/** Outline of an ellipse, turned by `turn` degrees. */
+const ellipsePath = (cx: number, cy: number, rx: number, ry: number, turn: number) => {
+  const a = (turn * Math.PI) / 180;
+  const ux = Math.cos(a) * rx;
+  const uy = Math.sin(a) * rx;
+  const arc = `a${rx.toFixed(1)} ${ry.toFixed(1)} ${Math.round(turn)} 1 0 `;
+  return `M${fmt(cx - ux)} ${fmt(cy - uy)}${arc}${fmt(ux * 2)} ${fmt(uy * 2)}${arc}${fmt(-ux * 2)} ${fmt(-uy * 2)}Z`;
+};
 const polyline = (points: number[]) => {
   let d = '';
   for (let i = 0; i < points.length; i += 2) d += `${i ? 'L' : 'M'}${fmt(points[i])} ${fmt(points[i + 1])}`;
@@ -592,9 +630,17 @@ export function buildScenery(input: SceneryInput): Scenery {
   };
 
   /* ---------- grandstand beside the straight, just past the finish line ---------- */
-  const standH = W >= 768 ? 130 : 84;
-  const standW = W >= 768 ? 30 : 18;
-  const stand = { x: W / 2 + roadW / 2 + (W >= 768 ? 30 : 24), y: track.finishY + 22, w: standW, h: standH };
+  const standW = W >= 768 ? clamp(60 * unit, 52, 72) : 38;
+  const standTileH = (standW * SPRITES.stand[1]) / SPRITES.stand[0];
+  const standTiles = 2;
+  const stand = {
+    x: W / 2 + roadW / 2 + (W >= 768 ? 30 : 22),
+    y: track.finishY + 22,
+    w: standW,
+    h: standTileH * standTiles + 4 * (standTiles - 1),
+    tiles: standTiles,
+    tileH: standTileH
+  };
 
   /* ---------- crescent moon past the finish, and the first stars of the night ---------- */
   const moon = {
@@ -664,9 +710,6 @@ export function buildScenery(input: SceneryInput): Scenery {
 
   /** Inside the village fence (set once the village is laid out)? */
   let villageHit: (x: number, y: number, pad: number) => boolean = () => false;
-  /** Hedge bushes along the road: x, y, radius triples. */
-  const hedgeDots: number[] = [];
-
   /** Room for a piece of this footprint at (x, y)? */
   const free = (x: number, y: number, rad: number) => {
     if (y > limitY) return false;
@@ -679,9 +722,6 @@ export function buildScenery(input: SceneryInput): Scenery {
     if (Math.hypot(x - moon.x, y - moon.y) < moon.r + rad + 10) return false;
     if (inCove(x, y, rad * 0.7 + 6) || inSea(x, y, rad * 0.75 + 8)) return false;
     if (villageHit(x, y, rad * 0.75 + 10)) return false;
-    for (let i = 0; i < hedgeDots.length; i += 3) {
-      if (Math.hypot(hedgeDots[i] - x, hedgeDots[i + 1] - y) < hedgeDots[i + 2] + rad * 0.8) return false;
-    }
     return true;
   };
 
@@ -739,7 +779,8 @@ export function buildScenery(input: SceneryInput): Scenery {
     const cy = (top + bottom) / 2;
     const hw = (right - left) / 2;
     const hh = (bottom - top) / 2;
-    const hs = unit * 1.16;
+    // Houses stop growing at 1.1: on very wide screens the village gets more houses, not bigger ones.
+    const hs = Math.min(unit, 1.1) * 1.08;
     const street = 13 * hs;
     // The village is a rounded shape (a superellipse) inside that rectangle: below 1 = inside.
     const POWER = 2.6;
@@ -752,12 +793,13 @@ export function buildScenery(input: SceneryInput): Scenery {
     const plazaRx = Math.min(hw * 0.3, 78 * hs);
     const plazaRy = Math.min(hh * 0.66, 62 * hs);
     const plaza = blob(cx, cy, plazaRx / 1.14, plazaRy / 1.14, vr() * 6.28, vr() * 6.28, vr() * 6.28);
-    const churchS = Math.min(1.14 * hs, (plazaRy * 2 + 10) / 74);
-    add('church', cx + (vr() - 0.5) * plazaRx * 0.2, cy + churchS * 6, churchS, (vr() - 0.5) * 16, true);
+    const churchS = Math.min(1.32 * Math.min(unit, 1), (plazaRy * 2 + 10) / 74);
+    // Upright, like every building: its front wall faces down the page.
+    add('church', cx + (vr() - 0.5) * plazaRx * 0.2, cy - churchS * 4, churchS, (vr() - 0.5) * 3, true);
     add('flowers', cx - plazaRx * 0.66, cy + plazaRy * 0.5, hs, 20, true);
     add('flowers', cx + plazaRx * 0.62, cy - plazaRy * 0.52, hs, -30, true);
-    add('tree2', cx - plazaRx * 0.7, cy - plazaRy * 0.5, 0.74 * hs, 0, true);
-    add('tree2', cx + plazaRx * 0.72, cy + plazaRy * 0.5, 0.84 * hs, 0, true);
+    add('tree2', cx - plazaRx * 0.7, cy - plazaRy * 0.5, 0.74 * hs, -15, true);
+    add('tree2', cx + plazaRx * 0.72, cy + plazaRy * 0.5, 0.84 * hs, 12, true);
 
     // Curved dirt streets out of the plaza, through the fence.
     const lanePts: number[] = [];
@@ -786,24 +828,12 @@ export function buildScenery(input: SceneryInput): Scenery {
     const offPlaza = (x: number, y: number, rad: number) =>
       Math.pow((x - cx) / (plazaRx + rad), 2) + Math.pow((y - cy) / (plazaRy + rad), 2) > 1;
 
-    // The fence wraps the whole cluster, with a slight wobble.
-    const f1 = vr() * 6.28;
-    const f2 = vr() * 6.28;
-    const ring: number[] = [];
-    for (let i = 0; i < 56; i += 1) {
-      const theta = (i / 56) * Math.PI * 2;
-      const ct = Math.cos(theta);
-      const st = Math.sin(theta);
-      const k = 0.955 + 0.028 * Math.sin(theta * 3 + f1) + 0.017 * Math.sin(theta * 5 + f2);
-      ring.push(
-        cx + hw * k * Math.sign(ct) * Math.pow(Math.abs(ct), 2 / POWER),
-        cy + hh * k * Math.sign(st) * Math.pow(Math.abs(st), 2 / POWER)
-      );
-    }
-    const fence = `${polyline(ring)}Z`;
+    // Same draws as the old ring fence took, so the houses stay where they were.
+    vr();
+    vr();
 
-    // Houses: thrown at random inside the fence, each with its own size and a few degrees of
-    // turn, long side towards the plaza. Not on the plaza, not on a street, not on each other.
+    // Houses: thrown at random inside the village, each with its own size and look, all upright
+    // (3 degrees of lean at most). Not on the plaza, not on a street, not on each other.
     const houseCap = W >= 1440 ? 30 : desktop ? 22 : 12;
     let houses = 0;
     for (let i = 0; i < 1100 && houses < houseCap; i += 1) {
@@ -812,16 +842,16 @@ export function buildScenery(input: SceneryInput): Scenery {
       const kind = vr();
       const size = vr();
       const turn = vr();
-      const id: PieceId = kind < 0.3 ? 'house-sq' : Math.abs(x - cx) / hw > Math.abs(y - cy) / hh ? 'house-v' : 'house';
-      const s = hs * (0.8 + 0.66 * size * size);
+      const id: PieceId = kind < 0.26 ? 'house-sq' : kind < 0.5 ? 'house-l' : kind < 0.74 ? 'house-long' : 'house';
+      const s = hs * (0.86 + 0.5 * size * size);
       const rad = FOOT[id] * s;
       if (!inside(x, y, rad * 0.9, 0.8) || !offPlaza(x, y, rad * 0.9) || !offLanes(x, y, street / 2 + rad * 0.82)) continue;
       if (crowded(x, y, rad, 0.9)) continue;
-      add(id, x, y, s, (turn - 0.5) * 28, true);
+      add(id, x, y, s, (turn - 0.5) * 6, true);
       houses += 1;
     }
-    // Trees, bushes and vegetable gardens in the lots between them.
-    const lotMix: Mix = [['garden', 34], ['tree2', 26], ['bush', 22], ['flowers', 12], ['tree', 6]];
+    // Trees, bushes, flower beds and short hedges in the lots between them.
+    const lotMix: Mix = [['hedge', 20], ['flowers', 22], ['tree2', 24], ['bush', 14], ['bushes', 12], ['tree', 8]];
     let lots = 0;
     for (let i = 0; i < 260 && lots < Math.round(houses * 0.6) + 3; i += 1) {
       const x = cx + (vr() * 2 - 1) * hw;
@@ -829,14 +859,26 @@ export function buildScenery(input: SceneryInput): Scenery {
       const id = pick(lotMix, vr());
       const size = vr();
       const turn = vr();
-      const s = hs * (id === 'garden' ? 0.9 + size * 0.5 : 0.62 + size * 0.34);
+      const s = hs * (id === 'hedge' ? 0.8 + size * 0.3 : 0.62 + size * 0.34);
       const rad = FOOT[id] * s;
       if (!inside(x, y, rad, 0.86) || !offPlaza(x, y, rad * 0.6) || !offLanes(x, y, street / 2 + rad * 0.7)) continue;
       if (crowded(x, y, rad, 0.9)) continue;
-      add(id, x, y, s, id === 'garden' ? (turn < 0.5 ? 0 : 90) + (size - 0.5) * 24 : id === 'flowers' ? turn * 90 : 0, true);
+      add(id, x, y, s, id === 'hedge' ? (turn < 0.5 ? 0 : 90) : turnOf(id, turn, size), true);
       lots += 1;
     }
-    village = { plaza, streets, streetWidth: street, fence };
+    // Wooden fence along the front and the back of the village (upright runs of three panels
+    // that follow the edge), open where a street leaves.
+    const rowW = 84 * hs;
+    for (const side of [-1, 1]) {
+      const span = Math.max(0, Math.floor((hw * 1.24) / rowW));
+      for (let k = 0; k < span; k += 1) {
+        const x = cx + (k - (span - 1) / 2) * rowW;
+        const y = cy + side * hh * 0.97 * Math.pow(1 - Math.pow(Math.abs(x - cx) / hw, POWER), 1 / POWER);
+        if (!offLanes(x, y, street / 2 + rowW * 0.55)) continue;
+        add('fence-row', x, y, hs, 0, true);
+      }
+    }
+    village = { plaza, streets, streetWidth: street };
     villageHit = (x, y, pad) => norm(x, y, 1 + pad / hw, 1 + pad / hh) < 1;
 
     // Outskirts: a few more houses outside the fence, in whatever free ground lies next to the
@@ -854,57 +896,58 @@ export function buildScenery(input: SceneryInput): Scenery {
       const size = vr();
       const turn = vr();
       const keep = vr();
-      const id: PieceId = kind < 0.34 ? 'house-sq' : kind < 0.67 ? 'house-v' : 'house';
-      const s = hs * (0.76 + 0.44 * size);
+      const id: PieceId = kind < 0.26 ? 'house-sq' : kind < 0.5 ? 'house-l' : kind < 0.74 ? 'house-long' : 'house';
+      const s = hs * (0.84 + 0.4 * size);
       const rad = FOOT[id] * s;
       const reach = norm(x, y, kx, ky);
       if (reach > 1 || keep < reach * 0.55 || y > breakY - 60 || inSand(x, y)) continue;
       if (!free(x, y, rad * 1.15) || crowded(x, y, rad, 1.25)) continue;
-      add(id, x, y, s, (turn - 0.5) * 28, true);
+      add(id, x, y, s, (turn - 0.5) * 6, true);
       out += 1;
     }
   }
 
-  /* ---------- hedges: rows of clipped bushes along the road, in places ---------- */
-  let hedges = '';
+  /* ---------- hedges: runs of clipped hedge along the road, in places ---------- */
   {
-    const size = desktop ? 7.5 * Math.min(unit, 1.15) : phone ? 5 : 6.5;
-    const offset = roadW / 2 + 9 + size;
+    const hs = desktop ? Math.min(unit, 1.15) : phone ? 0.62 : 0.8;
+    const long = KIT_PARTS.hedge[0].rx * 2 * hs;
+    const deep = (long * SPRITES.hedge[1]) / SPRITES.hedge[0];
+    const offset = roadW / 2 + 8 + deep / 2;
     const first = track.gridLead + 110;
     const room = track.lenAtY(breakY - 40) - first - 300;
-    const count = room > 300 ? clamp(Math.round(room / 520), 2, 10) : 0;
+    const count = room > 300 ? clamp(Math.round(room / 560), 2, 8) : 0;
     for (let i = 0; i < count; i += 1) {
       const start = first + ((i + rng() * 0.7) / count) * room;
       const length = 120 + rng() * 170;
       const side = rng() < 0.5 ? -1 : 1;
-      const phase = rng() * 6.28;
-      const dots: number[] = [];
-      for (let s = start; s <= start + length; s += size * 1.45) {
-        const p = track.at(s);
+      // (one more draw, as before: the numbers after this keep their place in the stream)
+      rng();
+      const run: number[] = [];
+      for (let at = start + long / 2; at <= start + length; at += long * 0.9) {
+        const p = track.at(at);
         const a = (p.angle * Math.PI) / 180;
         const x = p.x - Math.sin(a) * side * offset;
         const y = p.y + Math.cos(a) * side * offset;
         if (
           x < 6 ||
           x > W - 6 ||
-          inCard(x, y, size + 12) ||
-          inRects(calm, x, y, size + 8) ||
+          inCard(x, y, deep + 12) ||
+          inRects(calm, x, y, deep + 8) ||
           inSand(x, y) ||
-          inSea(x, y, size + 6) ||
-          inCove(x, y, size + 6) ||
-          riverGap(x, y) < size + 14 ||
-          cliffHit(x, y, size + 4) ||
-          villageHit(x, y, size + 6)
+          inSea(x, y, deep + 6) ||
+          inCove(x, y, deep + 6) ||
+          riverGap(x, y) < deep + 14 ||
+          cliffHit(x, y, deep + 4) ||
+          villageHit(x, y, deep + 6)
         ) {
-          dots.length = 0;
+          run.length = 0;
           break;
         }
-        dots.push(x, y, size * (0.86 + 0.2 * Math.abs(Math.sin(s / 9 + phase))));
+        // Lit side up: the sprite never ends upside down.
+        const turn = ((((p.angle + 90) % 180) + 180) % 180) - 90;
+        run.push(x, y, turn);
       }
-      for (let k = 0; k < dots.length; k += 3) {
-        hedges += circlePath(dots[k], dots[k + 1], dots[k + 2]);
-        hedgeDots.push(dots[k], dots[k + 1], dots[k + 2]);
-      }
+      for (let k = 0; k < run.length; k += 3) add('hedge', run[k], run[k + 1], hs, run[k + 2], true);
     }
   }
 
@@ -941,7 +984,7 @@ export function buildScenery(input: SceneryInput): Scenery {
     const depth = seaDepth(x);
     const turn = -35 + rng() * 70;
     const y = Math.max(NAV_H + 22, depth * 0.42);
-    if (depth > 96 && y < depth - 40 && !phone) add('boat', x, y, 1.1 * unit, turn);
+    if (depth > 96 && y < depth - 40 && !phone) add(u < 0.5 ? 'boat' : 'rowboat', x, y, 1.1 * unit, turn);
   }
 
   // Palms clustered along the beach, just behind the wet sand.
@@ -955,7 +998,7 @@ export function buildScenery(input: SceneryInput): Scenery {
     const px = x + (w - 0.5) * 40 * unit;
     const py = seaDepth(clamp(px, 0, seaR)) + rad * 0.8 + 16 + w * 30 * unit;
     if (!inSand(px, py) || !free(px, py, rad) || crowded(px, py, rad, 1)) continue;
-    add(id, px, py, s);
+    add(id, px, py, s, turnOf(id, u, v));
   }
 
   // Fallen rocks along the foot of the cliff.
@@ -969,7 +1012,7 @@ export function buildScenery(input: SceneryInput): Scenery {
       const depth = cliffDepths[at];
       const y = cliffTops[at] + depth + 9 + FOOT[id] * s * 0.45;
       if (depth > cliffDeep * 0.45 && !inCard(x, y, 6) && track.distance(x, y) > roadW / 2 + 20 && !crowded(x, y, FOOT[id] * s, 0.8)) {
-        add(id, x, y, s, 0, true);
+        add(id, x, y, s, turnOf(id, u, v), true);
       }
       x += (48 + u * 74) * unit;
     }
@@ -996,13 +1039,13 @@ export function buildScenery(input: SceneryInput): Scenery {
         const zoneGap = (big ? zone.bigGap : zone.smallGap) * unit;
         if (w > (gap * gap) / (zoneGap * zoneGap)) continue;
         const id = pick(big ? zone.big : zone.small, u);
-        // Sizes: single trees from 0.7 to 1.6 (most of them small, a few large), landmark
+        // Sizes: single trees from 0.85 to 1.6 (most of them small, a few large), landmark
         // trees 1 to 1.6, groves 0.8 to 1.3, beach and garden things close to 1.
-        const s = unit * (LANDMARK.has(id) ? 1 + v * 0.6 : big ? 0.8 + v * 0.5 : SINGLE_TREE.has(id) ? 0.7 + 0.9 * v * v : 0.85 + v * 0.35);
+        const s = unit * (LANDMARK.has(id) ? 1 + v * 0.6 : big ? 0.8 + v * 0.5 : SINGLE_TREE.has(id) ? 0.85 + 0.75 * v * v : 0.85 + v * 0.35);
         const rad = FOOT[id] * s;
         if (inClearing(x, y, rad) && !GROUND_COVER.has(id)) continue;
         if (!free(x, y, rad) || crowded(x, y, rad, zone.pack)) continue;
-        add(id, x, y, s, id === 'flowers' ? Math.round(v * 3) * 30 : 0);
+        add(id, x, y, s, turnOf(id, u, v));
       }
     }
   }
@@ -1020,8 +1063,44 @@ export function buildScenery(input: SceneryInput): Scenery {
     });
   }
 
-  // Painter's order: pieces lower on the page cover the shadows of the ones above.
+  // Painter's order: pieces lower on the page overlap the ones above.
   kept.sort((a, b) => a.y - b.y);
+
+  // Ground shadows: one ellipse per sprite, offset down and to the right whatever the piece's
+  // turn. All of them go in two paths (a wide faint one and a tighter one) under the pieces.
+  const shadows = { soft: '', core: '', tailSoft: '', tailCore: '' };
+  for (const piece of kept) {
+    const a = (piece.r * Math.PI) / 180;
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    let soft = '';
+    let core = '';
+    for (const part of KIT_PARTS[piece.id]) {
+      const x = piece.x + (part.x * cos - part.y * sin + part.dx) * piece.s;
+      const y = piece.y + (part.x * sin + part.y * cos + part.dy) * piece.s;
+      const rx = part.rx * piece.s;
+      const ry = part.ry * piece.s;
+      const turn = Math.abs(rx - ry) < rx * 0.2 ? 0 : piece.r + part.turn;
+      soft += ellipsePath(x, y, rx + 2.5, ry + 2.5, turn);
+      core += ellipsePath(x, y, Math.max(1, rx - 1.5), Math.max(1, ry - 1.5), turn);
+    }
+    if (piece.tail) {
+      shadows.tailSoft += soft;
+      shadows.tailCore += core;
+    } else {
+      shadows.soft += soft;
+      shadows.core += core;
+    }
+  }
+
+  const calmBox = calm.length
+    ? {
+        left: Math.min(...calm.map(rect => rect.left)),
+        right: Math.max(...calm.map(rect => rect.right)),
+        top: Math.min(...calm.map(rect => rect.top)),
+        bottom: Math.max(...calm.map(rect => rect.bottom))
+      }
+    : null;
 
   return {
     sand,
@@ -1038,8 +1117,9 @@ export function buildScenery(input: SceneryInput): Scenery {
     village,
     river,
     bridge,
-    hedges,
     stand,
+    shadows,
+    calmBox,
     moon,
     stars,
     pieces: kept

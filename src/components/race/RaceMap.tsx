@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import SceneryDefs from './SceneryDefs';
 import { orbitArena } from '../../data/archive';
 import { colorOf } from '../../data/models';
-import { markStep } from '../../lib/boot';
+import { markStep, preloadImages } from '../../lib/boot';
 import { useReducedMotion } from '../../lib/motion';
 import {
   buildChunks,
@@ -14,6 +14,7 @@ import {
   type Scenery,
   type TailSlice
 } from '../../lib/scenery';
+import { MAP_ASSET_URLS, mapAsset, TEXTURES, TEXTURE_SIZE } from '../../lib/sceneryKit';
 import { buildTrack, CAR_SPACING, TRACK_STEP, type BlockRect, type Track, type TrackSide } from '../../lib/track';
 import './RaceMap.css';
 
@@ -31,19 +32,28 @@ const GRID_TOP = NAV_H + 34;
 /** Length of the last stretch (before the finish) that breaks up. */
 const BREAK_BEFORE_FINISH = 640;
 const BAND = 220;
+/** The ground fades out over this many px at the very end of the map. */
+const GROUND_FADE = 200;
 /** px each stretch of road is drawn past its end, under the next one. */
 const SEAM_OVERLAP = 8;
 const TINT_GOLD = [255, 196, 120] as const;
 const TINT_DUSK = [60, 70, 120] as const;
 const TINT_NIGHT = [16, 30, 53] as const;
-/** Same colors as the --map-* tokens: the pieces that break off are tinted for their hour of the day. */
+/**
+ * Same colors as the --map-* tokens (road) and as the sprites (leaves, roof tiles): the pieces
+ * that break off are tinted for their hour of the day.
+ */
 const CHUNK_RGB: Record<ChunkKind, readonly number[]> = {
-  asphalt: [109, 116, 134],
-  'kerb-red': [232, 120, 111],
+  asphalt: [95, 102, 119],
+  'kerb-red': [227, 93, 82],
   'kerb-white': [251, 247, 239],
-  leaf: [127, 191, 122],
-  roof: [233, 162, 127]
+  leaf: [98, 164, 62],
+  roof: [222, 98, 54]
 };
+
+/** Sprites and ground textures of the map, loaded once (the loader's "map" step waits for them). */
+let mapAssets: Promise<void> | null = null;
+const loadMapAssets = () => (mapAssets ??= preloadImages(MAP_ASSET_URLS));
 
 interface Layout {
   W: number;
@@ -273,10 +283,13 @@ export default function RaceMap() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let alive = true;
     let first = true;
+    // The "map" step is done when the map is laid out AND its sprites and textures are in, so
+    // nothing pops in after the lights go out.
+    const assets = loadMapAssets();
     const run = () => {
       if (!alive) return;
       setLayout(previous => measure(root, previous) ?? previous);
-      markStep('map');
+      void assets.then(() => markStep('map'));
     };
     const schedule = () => {
       clearTimeout(timer);
@@ -590,7 +603,21 @@ export default function RaceMap() {
     0,
     slices.findIndex(slice => track.finishLen < slice.to)
   );
-  const { village, bridge, cliff, river, moon } = scenery;
+  const { village, bridge, cliff, river, moon, stand, shadows, calmBox } = scenery;
+  // Ground textures: 512 px tiles, smaller on phones (where every piece is smaller too).
+  const tile = W < 768 ? TEXTURE_SIZE * 0.62 : TEXTURE_SIZE;
+  const fadeY = Math.max(breakY, H - GROUND_FADE);
+  // Darker ground of the woods: fades in at 60% of the map and hands over to the dusk ground of
+  // the last stretch (or ends at 92%, when the last stretch starts lower than that).
+  const woodsTop = H * 0.6;
+  const woodsHold = breakY <= H * 0.92 ? breakY : H * 0.86;
+  const woodsEnd = breakY <= H * 0.92 ? bandEnd : H * 0.92;
+  const woods = woodsHold - woodsTop > 140;
+  const woodsAt = (y: number) => clamp((y - woodsTop) / (woodsEnd - woodsTop)).toFixed(4);
+  // Bridge sprite: its planks run along the road, so it is drawn turned a quarter; the deck
+  // (the sprite minus its posts and rails) is as wide as the road and its kerbs.
+  const bridgeAcross = bridge ? bridge.w / 0.8 : 0;
+  const bridgeAlong = bridge ? bridge.len + 12 : 0;
   const finishMark = (
     <>
       <rect x={finish.x - (roadW + 10) / 2} y={finish.y - 7} width={roadW + 10} height="14" fill="url(#rm-check)" />
@@ -617,24 +644,39 @@ export default function RaceMap() {
               <rect width="12" height="12" fill="#fbf7ef" />
               <path d="M0 0h6v6h-6zM6 6h6v6h-6z" fill="#161a22" />
             </pattern>
-            <pattern id="rm-planks" width="9" height="9" patternUnits="userSpaceOnUse">
-              <rect width="9" height="9" className="mf-wood" />
-              <path d="M0 0.5H9" className="rm-plank-line" />
-            </pattern>
-            <pattern id="rm-stand" width="30" height="24" patternUnits="userSpaceOnUse">
-              <rect width="30" height="8" className="mf-roof" />
-              <rect y="8" width="30" height="8" className="mf-wall" />
-              <rect y="16" width="30" height="8" className="mf-sea-deep" />
-            </pattern>
-            <linearGradient id="rm-ground-body" gradientUnits="userSpaceOnUse" x1="0" y1={breakY} x2="0" y2={bandEnd}>
-              <stop offset="0" className="rm-stop-grass" />
-              <stop offset="1" className="rm-stop-grass" stopOpacity="0" />
+            {TEXTURES.map(name => (
+              // Half a px of overlap, so no hairline shows between two tiles.
+              <pattern key={name} id={`rm-${name}`} width={tile} height={tile} patternUnits="userSpaceOnUse">
+                <image href={mapAsset(name)} x="-0.25" y="-0.25" width={tile + 0.5} height={tile + 0.5} preserveAspectRatio="none" />
+              </pattern>
+            ))}
+            {/* Fades whatever it is put on from opaque (top) to nothing (bottom). */}
+            <linearGradient id="rm-fade-down" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff" />
+              <stop offset="1" stopColor="#000" />
             </linearGradient>
+            <mask id="rm-fade" maskContentUnits="objectBoundingBox">
+              <rect width="1" height="1" fill="url(#rm-fade-down)" />
+            </mask>
             <linearGradient id="rm-ground-tail" gradientUnits="userSpaceOnUse" x1="0" y1={breakY} x2="0" y2={H}>
-              <stop offset="0" className="rm-stop-grass-dark" />
-              <stop offset={clamp((H - 200 - breakY) / (H - breakY)).toFixed(4)} className="rm-stop-grass-dark" />
-              <stop offset="1" className="rm-stop-grass-dark" stopOpacity="0" />
+              <stop offset="0" className="rm-stop-dusk-ground" stopOpacity="0" />
+              <stop offset={clamp(BAND / (H - breakY)).toFixed(4)} className="rm-stop-dusk-ground" stopOpacity="0.44" />
+              <stop offset={clamp((fadeY - breakY) / (H - breakY)).toFixed(4)} className="rm-stop-dusk-ground" stopOpacity="0.44" />
+              <stop offset="1" className="rm-stop-dusk-ground" stopOpacity="0" />
             </linearGradient>
+            {woods && (
+              <linearGradient id="rm-woods" gradientUnits="userSpaceOnUse" x1="0" y1={woodsTop} x2="0" y2={woodsEnd}>
+                <stop offset="0" className="rm-stop-woods" stopOpacity="0" />
+                <stop offset={woodsAt(woodsTop + Math.min(H * 0.08, (woodsHold - woodsTop) / 2))} className="rm-stop-woods" stopOpacity="0.2" />
+                <stop offset={woodsAt(woodsHold)} className="rm-stop-woods" stopOpacity="0.2" />
+                <stop offset="1" className="rm-stop-woods" stopOpacity="0" />
+              </linearGradient>
+            )}
+            <radialGradient id="rm-calm">
+              <stop offset="0" className="rm-stop-calm" stopOpacity="0.56" />
+              <stop offset="0.72" className="rm-stop-calm" stopOpacity="0.5" />
+              <stop offset="1" className="rm-stop-calm" stopOpacity="0" />
+            </radialGradient>
             <linearGradient id="rm-tint-tail" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={H}>
               {tailStops.map((stop, index) => (
                 <stop key={index} offset={clamp(stop.at).toFixed(4)} stopColor={stop.color} />
@@ -658,24 +700,52 @@ export default function RaceMap() {
 
           {/* Ground of the last stretch: fades after the finish line. Drawn under everything. */}
           <g data-tail="ground">
+            <rect x="0" y={breakY} width={W} height={fadeY - breakY} fill="url(#rm-grass)" />
+            <rect x="0" y={fadeY} width={W} height={H - fadeY} fill="url(#rm-grass)" mask="url(#rm-fade)" />
             <rect x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-ground-tail)" />
-            <rect x={scenery.stand.x} y={scenery.stand.y} width={scenery.stand.w} height={scenery.stand.h} rx="4" fill="url(#rm-stand)" />
+            <rect x={stand.x + 3} y={stand.y + 5} width={stand.w} height={stand.h} rx="6" className="rm-shade rm-shade--hard" />
+            {Array.from({ length: stand.tiles }, (_, index) => (
+              <image
+                key={index}
+                href={mapAsset('stand')}
+                x={stand.x}
+                y={stand.y + index * (stand.tileH + 4)}
+                width={stand.w}
+                height={stand.tileH}
+                preserveAspectRatio="none"
+              />
+            ))}
           </g>
 
           {/* Ground of the rest of the map. Its lower band fades into the last stretch. */}
-          <rect x="0" y="0" width={W} height={bandEnd} fill="url(#rm-ground-body)" />
+          <rect x="0" y="0" width={W} height={breakY} fill="url(#rm-grass)" />
+          <rect x="0" y={breakY} width={W} height={BAND} fill="url(#rm-grass)" mask="url(#rm-fade)" />
+          {woods && <rect x="0" y={woodsTop} width={W} height={woodsEnd - woodsTop} fill="url(#rm-woods)" />}
           {scenery.patches.map((d, index) => (
-            <path key={index} d={d} className="mf-grass-2" />
+            <path key={index} d={d} className="rm-patch" />
           ))}
-          <path d={scenery.sand} className="mf-sand" />
+          <path d={scenery.sand} className="rm-sand-edge" fill="url(#rm-sand)" />
           <path d={scenery.wetSand} className="rm-wet-sand" />
-          <path d={scenery.shallow} className="mf-shallow" />
-          {scenery.sea && <path d={scenery.sea} className="mf-sea" />}
-          {scenery.seaDeep && <path d={scenery.seaDeep} className="mf-sea-deep" />}
+          {/* Sea: the texture, lighter in the shallows and deeper far from the shore. */}
+          <path d={scenery.shallow} fill="url(#rm-sea)" />
+          <path d={scenery.shallow} className="rm-shallow" />
+          {scenery.sea && <path d={scenery.sea} fill="url(#rm-sea)" />}
+          {scenery.seaDeep && <path d={scenery.seaDeep} className="rm-sea-deep" />}
           <path d={scenery.foam} className="rm-foam" />
           {scenery.foamInner && <path d={scenery.foamInner} className="rm-foam rm-foam--inner" />}
-          {scenery.cove && <path d={scenery.cove} className="mf-sea" />}
+          {scenery.cove && <path d={scenery.cove} fill="url(#rm-sea)" />}
           {scenery.coveFoam && <path d={scenery.coveFoam} className="rm-foam" />}
+          {calmBox && (
+            // Calm area behind the hero text: a light wash over the textured ground, so the
+            // title, the lede and the numbers keep their contrast.
+            <ellipse
+              cx={(calmBox.left + calmBox.right) / 2}
+              cy={(calmBox.top + calmBox.bottom) / 2}
+              rx={((calmBox.right - calmBox.left) / 2 + 28) * Math.SQRT2}
+              ry={((calmBox.bottom - calmBox.top) / 2 + 22) * Math.SQRT2}
+              fill="url(#rm-calm)"
+            />
+          )}
           {cliff && (
             // A step in the ground: the shadow it throws on the lower grass, the face, the shaded
             // band along its foot, a seam in the rock and the lit top edge.
@@ -688,15 +758,14 @@ export default function RaceMap() {
           )}
           {village && (
             <>
-              <path d={village.plaza} className="mf-sand" />
-              {/* The ring fence read as a diagram (a dashed ellipse): the village is open now. */}
-              <path d={village.streets} className="rm-street" strokeWidth={village.streetWidth} />
+              <path d={village.plaza} className="rm-sand-edge" fill="url(#rm-sand)" />
+              <path d={village.streets} className="rm-street" stroke="url(#rm-sand)" strokeWidth={village.streetWidth} />
             </>
           )}
           {river && (
             <>
               <path d={river.water} className="rm-river-bank" />
-              <path d={river.water} className="rm-river" />
+              <path d={river.water} className="rm-river" fill="url(#rm-sea)" />
               <path d={river.deep} className="rm-river-deep" strokeWidth={river.deepWidth} />
               {river.stones && <path d={river.stones} className="rm-river-stones" />}
             </>
@@ -735,6 +804,8 @@ export default function RaceMap() {
 
           {/* Scenery of the last stretch: fades with its ground. */}
           <g data-tail="scenery">
+            {shadows.tailSoft && <path d={shadows.tailSoft} className="rm-shade" />}
+            {shadows.tailCore && <path d={shadows.tailCore} className="rm-shade" />}
             <Pieces scenery={scenery} tail />
           </g>
 
@@ -742,13 +813,16 @@ export default function RaceMap() {
             <Road id="rm-road-body" offset={0} roadW={roadW} />
           </g>
           {bridge && (
-            // Wooden deck over the stream: planks across the road, a rail on each side, no kerbs.
-            <g transform={`translate(${bridge.x.toFixed(1)} ${bridge.y.toFixed(1)}) rotate(${bridge.angle.toFixed(1)})`}>
-              <rect x={-bridge.w / 2 + 3} y={-bridge.len / 2 + 5} width={bridge.w} height={bridge.len} rx="3" className="mf-shadow" />
-              <rect x={-bridge.w / 2} y={-bridge.len / 2} width={bridge.w} height={bridge.len} rx="3" fill="url(#rm-planks)" />
-              <path
-                d={`M${(-bridge.w / 2 + 2).toFixed(1)} ${(-bridge.len / 2 - 5).toFixed(1)}v${(bridge.len + 10).toFixed(1)}M${(bridge.w / 2 - 2).toFixed(1)} ${(-bridge.len / 2 - 5).toFixed(1)}v${(bridge.len + 10).toFixed(1)}`}
-                className="rm-rail"
+            // Wooden deck over the stream (sprite): it covers the road and its kerbs there.
+            <g transform={`translate(${bridge.x.toFixed(1)} ${bridge.y.toFixed(1)}) rotate(${(bridge.angle + 90).toFixed(1)})`}>
+              <rect x={-bridgeAlong / 2 - 3} y={-bridgeAcross / 2 + 1} width={bridgeAlong + 6} height={bridgeAcross + 4} rx="6" className="rm-shade rm-shade--hard" />
+              <image
+                href={mapAsset('bridge')}
+                x={-bridgeAlong / 2}
+                y={-bridgeAcross / 2}
+                width={bridgeAlong}
+                height={bridgeAcross}
+                preserveAspectRatio="none"
               />
             </g>
           )}
@@ -756,12 +830,9 @@ export default function RaceMap() {
             <rect key={slot.key} x={slot.x - roadW * 0.21} y={slot.y} width={roadW * 0.42} height="3" rx="1" className="rm-slot" />
           ))}
           <rect x={startLine.x - roadW / 2} y={startLine.y} width={roadW} height="8" fill="url(#rm-check)" />
-          {scenery.hedges && (
-            <>
-              <path d={scenery.hedges} className="mf-shadow" transform="translate(2.5 3.5)" />
-              <path d={scenery.hedges} className="rm-hedge" />
-            </>
-          )}
+          {/* Soft shadows of every piece: two stacked fills in one path each, no filter. */}
+          {shadows.soft && <path d={shadows.soft} className="rm-shade" />}
+          {shadows.core && <path d={shadows.core} className="rm-shade" />}
           <Pieces scenery={scenery} tail={false} />
 
           {/* Hour of the day: gold at the top, dusk towards the finish. */}

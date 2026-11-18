@@ -44,122 +44,47 @@
   height: 0;
 }
 
-/* ---------- map fills (one class per token) ---------- */
-.mf-shadow {
-  fill: var(--map-shadow);
-}
-.mf-grass-2 {
-  fill: var(--map-grass-2);
-}
-.mf-grass-dark {
-  fill: var(--map-grass-dark);
-}
-.mf-sand {
-  fill: var(--map-sand);
-}
+/* ---------- map ground ---------- */
+/* The grass, the sand and the sea are textures (SVG patterns, public/map); the pieces are
+   sprites. What is left here are the tints and lines drawn over them. */
 .mf-sand-2 {
   fill: var(--map-sand-2);
 }
-.mf-shallow {
-  fill: color-mix(in oklab, var(--map-sea) 58%, var(--map-foam));
+/* Soft shadows of the pieces: two of these stacked (a wide one and a tighter one), no filter. */
+.rm-shade {
+  fill: var(--map-shadow);
 }
-.mf-sea {
-  fill: var(--map-sea);
+.rm-shade--hard {
+  fill: rgba(24, 40, 24, 0.24);
 }
-.mf-sea-deep {
-  fill: var(--map-sea-deep);
+/* Large soft patches of deeper green over the grass texture. */
+.rm-patch {
+  fill: var(--map-grass-dark);
+  opacity: 0.2;
 }
-.mf-roof {
-  fill: var(--map-roof);
-}
-.mf-roof-2 {
-  fill: var(--map-roof-2);
-}
-.mf-wall {
-  fill: var(--map-wall);
-}
-.mf-tree {
-  fill: var(--map-tree);
-}
-.mf-tree-2 {
-  fill: var(--map-tree-2);
-}
-/* Deep green of the woods (dense trees, pines). */
-.mf-tree-deep {
-  fill: color-mix(in oklab, var(--map-tree-2) 70%, #2c5a52);
-}
-.mf-trunk {
-  fill: var(--map-trunk);
-}
-.mf-rock {
-  fill: var(--map-rock);
-}
-.mf-wood {
-  fill: var(--map-wood);
-}
-/* Garden soil and its rows of greens; crop fields (green and ripe) and their plough lines. */
-.mf-soil {
-  fill: color-mix(in oklab, var(--map-sand-2) 62%, var(--map-trunk));
-}
-.mf-rows {
-  fill: none;
-  stroke: var(--map-tree-2);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 0.1 5.4;
-}
-.mf-field {
-  fill: color-mix(in oklab, var(--map-grass-2) 55%, var(--map-sand));
-}
-.mf-field-ripe {
-  fill: color-mix(in oklab, var(--map-sand-2) 80%, var(--map-roof));
-}
-.mf-furrows {
-  fill: none;
-  stroke: var(--map-grass-dark);
-  stroke-width: 4;
-  stroke-linecap: round;
-  opacity: 0.75;
-}
-.mf-furrows--ripe {
-  stroke: var(--map-sand);
-}
-.mf-ridge {
-  fill: var(--map-wall);
-  opacity: 0.7;
-}
-.mf-ridge-line {
-  fill: none;
-  stroke: var(--map-wall);
-  stroke-width: 1.6;
-  opacity: 0.7;
-}
-.mf-fence,
-.mf-fence-shadow {
-  fill: none;
-  stroke-width: 3.5;
-  stroke-dasharray: 9 5;
+.rm-sand-edge {
+  stroke: color-mix(in oklab, var(--map-sand-2) 70%, var(--map-trunk));
+  stroke-width: 2;
+  stroke-opacity: 0.45;
   stroke-linejoin: round;
 }
-.mf-fence {
-  stroke: var(--map-wood);
+.rm-shallow {
+  fill: var(--map-foam);
+  opacity: 0.26;
 }
-.mf-fence-shadow {
-  stroke: var(--map-shadow);
-}
-.mf-wake {
-  fill: none;
-  stroke: var(--map-foam);
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0.8;
+.rm-sea-deep {
+  fill: var(--map-sea-deep);
+  opacity: 0.4;
 }
 
-.rm-stop-grass {
-  stop-color: var(--map-grass);
+.rm-stop-dusk-ground {
+  stop-color: #2c5f3c;
 }
-.rm-stop-grass-dark {
-  stop-color: var(--map-grass-dark);
+.rm-stop-woods {
+  stop-color: #2a6238;
+}
+.rm-stop-calm {
+  stop-color: #fff6e2;
 }
 
 .rm-foam {
@@ -177,12 +102,13 @@
 }
 .rm-wet-sand {
   fill: none;
-  stroke: var(--map-sand-2);
+  stroke: color-mix(in oklab, var(--map-sand-2) 80%, var(--map-trunk));
+  stroke-opacity: 0.6;
   stroke-width: 18;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-/* Cliff: the lit top edge, the shaded band along the foot of the face, a seam in the rock. */
+/* Cliff: the lit top edge, the shaded band along the foot of the face. */
 .rm-cliff-lip {
   fill: none;
   stroke: var(--map-wall);
@@ -197,18 +123,8 @@
 .rm-cliff-foot {
   fill: color-mix(in oklab, var(--map-sand-2) 62%, var(--map-trunk));
 }
-.rm-cliff-strata {
-  fill: none;
-  stroke: color-mix(in oklab, var(--map-sand-2) 70%, var(--map-trunk));
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 34 16 12 20;
-  opacity: 0.8;
-}
 .rm-street {
   fill: none;
-  stroke: var(--map-sand);
   stroke-linecap: round;
 }
 /* Stream: sandy bank (a wide outline of the water shape), water, deeper middle, flow, stones. */
@@ -217,9 +133,9 @@
   stroke-linejoin: round;
 }
 .rm-river {
-  fill: var(--map-water);
-  stroke: var(--map-water);
+  stroke: var(--map-sea-deep);
   stroke-width: 2;
+  stroke-opacity: 0.55;
 }
 .rm-river-bank {
   fill: var(--map-sand-2);
@@ -233,23 +149,10 @@
   stroke-linejoin: round;
   opacity: 0.4;
 }
-.rm-river-flow {
-  fill: none;
-  stroke: var(--map-foam);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 15 31;
-  opacity: 0.75;
-}
 .rm-river-stones {
   fill: var(--map-rock);
   stroke: rgba(40, 52, 40, 0.18);
   stroke-width: 1;
-}
-/* Hedges along the road. */
-.rm-hedge {
-  fill: var(--map-tree-2);
 }
 /* Night at the finish: crescent moon and the first stars. */
 .rm-moon {
@@ -261,18 +164,6 @@
 }
 .rm-star {
   fill: #fff;
-}
-.rm-rail {
-  fill: none;
-  stroke: var(--map-trunk);
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-.rm-plank-line {
-  fill: none;
-  stroke: var(--map-trunk);
-  stroke-width: 1.2;
-  opacity: 0.7;
 }
 
 /* ---------- road ---------- */
