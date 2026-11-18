@@ -1,0 +1,73 @@
+.bg__base,
+.bg__stars,
+.bg__galaxy,
+.bg__veil {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bg__base {
+  z-index: -4;
+  background: linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 52%, var(--bg-2) 100%);
+}
+
+/* static star field: shown when the Galaxy is not running */
+.bg__stars {
+  z-index: -3;
+  background-image:
+    radial-gradient(1px 1px at 37px 59px, rgba(241, 246, 253, 0.5) 50%, transparent 51%),
+    radial-gradient(1px 1px at 141px 233px, rgba(131, 202, 255, 0.35) 50%, transparent 51%),
+    radial-gradient(1px 1px at 311px 97px, rgba(133, 228, 235, 0.25) 50%, transparent 51%);
+  background-size:
+    211px 211px,
+    347px 347px,
+    503px 503px;
+}
+
+.bg__stars.is-hidden {
+  opacity: 0;
+}
+
+.bg__galaxy {
+  z-index: -2;
+}
+
+.bg__veils {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.bg__veil {
+  opacity: 0;
+  transition: opacity var(--t-section) var(--ease-rise);
+}
+
+.bg__veil--warm {
+  background: linear-gradient(115deg, rgba(48, 35, 55, 0.75), rgba(34, 34, 53, 0.35) 55%, transparent 85%);
+}
+
+.bg__veil--cool {
+  background: linear-gradient(245deg, rgba(23, 40, 59, 0.7), rgba(20, 36, 58, 0.3) 55%, transparent 85%);
+}
+
+.bg__veils[data-tone='warm'] .bg__veil--warm,
+.bg__veils[data-tone='cool'] .bg__veil--cool {
+  opacity: 1;
+}
+
+/* ignition: background fades in at t = 0 (600 ms, linear) */
+@media (prefers-reduced-motion: no-preference) {
+  .bg__stars:not(.is-hidden),
+  .bg__galaxy {
+    opacity: 0;
+    transition: opacity 600ms linear;
+  }
+
+  [data-ignited] .bg__stars:not(.is-hidden),
+  [data-ignited] .bg__galaxy {
+    opacity: 1;
+  }
+}

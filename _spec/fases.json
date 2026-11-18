@@ -1,0 +1,22 @@
+[
+  {
+    "etapa": "direcao",
+    "inicio": "2026-11-18T13:44:23.638Z"
+  },
+  {
+    "etapa": "especificacao",
+    "inicio": "2026-11-18T13:44:23.820Z"
+  },
+  {
+    "etapa": "codigo",
+    "inicio": "2026-11-18T13:48:49.313Z"
+  },
+  {
+    "etapa": "revisao",
+    "inicio": "2026-11-18T14:39:04.821Z"
+  },
+  {
+    "etapa": "entrega",
+    "inicio": "2026-11-18T14:51:16.134Z"
+  }
+]

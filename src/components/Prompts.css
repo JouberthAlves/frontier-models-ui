@@ -1,0 +1,143 @@
+.prompts__body {
+  display: grid;
+  gap: 20px;
+}
+
+.prompts__group {
+  display: grid;
+  gap: 10px;
+}
+
+.prompts__group-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.prompts__group-label--racing {
+  color: var(--warm-soft);
+}
+
+.prompts__group-label--orbitarium {
+  color: var(--cyan);
+}
+
+.prompts__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.prompt-tab {
+  position: relative;
+  isolation: isolate;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-chip);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-2);
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  transition: transform var(--t-micro) var(--ease-out);
+}
+
+.prompt-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ink);
+  opacity: 0;
+  transition: opacity var(--t-short) ease;
+}
+
+.prompt-tab:hover::before {
+  opacity: 0.06;
+}
+
+.prompt-tab:active {
+  transform: scale(0.98);
+}
+
+.prompt-tab--racing.is-active {
+  box-shadow: inset 0 0 0 2px var(--warm);
+  color: var(--ink);
+}
+
+.prompt-tab--orbitarium.is-active {
+  box-shadow: inset 0 0 0 2px var(--cool);
+  color: var(--ink);
+}
+
+.prompt-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.prompt-panel--racing {
+  border-color: var(--line-warm);
+}
+
+.prompt-panel--orbitarium {
+  border-color: var(--line-cool);
+}
+
+.prompt-panel__inner {
+  display: grid;
+  gap: 24px;
+  justify-items: start;
+  padding: clamp(20px, 3vw, 32px);
+  animation: fade-in var(--t-short) ease both;
+}
+
+.prompt-panel__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 18px 32px;
+  width: 100%;
+}
+
+.prompt-panel__facts > div {
+  min-width: 0;
+}
+
+.prompt-panel__facts dt {
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.prompt-panel__facts dd {
+  overflow-wrap: anywhere;
+}
+
+.prompt-panel__runs {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.prompt-panel__runs-title {
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.prompt-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.prompt-panel__chips .chip {
+  color: var(--ink);
+}
+
+.prompt-panel__cat {
+  color: var(--ink-2);
+}

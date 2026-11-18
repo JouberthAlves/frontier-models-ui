@@ -1,0 +1,291 @@
+.compare-bar {
+  position: fixed;
+  z-index: 45;
+  left: 50%;
+  bottom: 0;
+  width: min(1100px, calc(100% - 32px));
+  margin-bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 12px 12px 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(14, 32, 52, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.compare-bar__label {
+  flex: none;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.compare-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.compare-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 4px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
+  background: rgba(8, 15, 29, 0.5);
+  font-weight: 600;
+  font-size: 15px;
+  animation: chip-in 180ms var(--ease-out) both;
+}
+
+.compare-chip:not(:has(.compare-chip__remove)) {
+  padding-right: 16px;
+}
+
+.compare-chip.is-leaving {
+  animation: chip-out 150ms ease forwards;
+}
+
+.compare-chip__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.compare-chip__name--short {
+  display: none;
+}
+
+.compare-chip__remove {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 20px;
+  line-height: 1;
+  position: relative;
+}
+
+/* 44px hit area around the 36px visual */
+.compare-chip__remove::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.compare-chip__remove:hover {
+  color: var(--ink);
+}
+
+.compare-bar__add {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px dashed var(--line-cool);
+  border-radius: var(--r-chip);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform var(--t-micro) var(--ease-out);
+}
+
+.compare-bar__add:active {
+  transform: scale(0.98);
+}
+
+.compare-bar__go {
+  flex: none;
+  min-height: 48px;
+}
+
+.compare-bar__go-short {
+  display: none;
+}
+
+@keyframes chip-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- popover ---------- */
+.compare-pop {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 10px);
+  width: min(340px, calc(100% - 24px));
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: 0 18px 40px rgba(4, 8, 16, 0.5);
+}
+
+.compare-pop[hidden] {
+  display: none;
+}
+
+.compare-pop__title {
+  padding: 4px 8px 8px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.compare-pop__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  font-weight: 600;
+}
+
+.compare-pop__item:hover:not(:disabled) {
+  background: rgba(241, 246, 253, 0.06);
+}
+
+.compare-pop__item:disabled {
+  color: var(--ink-3);
+}
+
+.compare-pop__check {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* ---------- small screens ---------- */
+@media (max-width: 599px) {
+  .compare-bar {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .compare-bar__label {
+    display: none;
+  }
+
+  .compare-bar__chips {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .compare-bar__chips > li {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .compare-bar__add-wrap {
+    flex: none !important;
+  }
+
+  .compare-chip {
+    gap: 6px;
+    padding-left: 10px;
+    font-size: 14px;
+    max-width: 100%;
+  }
+
+  .compare-chip__name--short {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .compare-chip__remove {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+
+  .compare-chip__remove::before {
+    inset: -8px;
+  }
+
+  .compare-bar__add {
+    width: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .compare-bar__add::after {
+    content: '+';
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .compare-chip__name--full,
+  .compare-bar__go-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .compare-chip__name--short,
+  .compare-bar__go-short {
+    display: inline;
+  }
+
+  /* Phone: the button is a 44px arrow; its full label stays for screen readers. */
+  .compare-bar__go {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .compare-bar__go-short {
+    display: none !important;
+  }
+
+  .compare-bar__go::after {
+    content: "→";
+    font-size: 20px;
+    line-height: 1;
+  }
+}
+
+/* ---------- ignition: rises from below at 2400 ms ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .compare-bar {
+    transform: translate(-50%, calc(100% + 24px));
+    transition: transform 500ms var(--ease-out) 2400ms;
+  }
+
+  [data-ignited] .compare-bar {
+    transform: translateX(-50%);
+  }
+}

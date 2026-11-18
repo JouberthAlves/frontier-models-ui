@@ -1,0 +1,696 @@
+{
+  "repo": "JouberthAlves/Frontiers-Models",
+  "commit": {
+    "sha": "a71127c12508e4b7b35e62a711d3ef98986e0f4c",
+    "short": "a71127c"
+  },
+  "benchmarks": {
+    "racing": {
+      "folder": "benchmarks/racing",
+      "currentPrompt": "racing-v3.4",
+      "prompts": [
+        {
+          "key": "racing-v2.6",
+          "path": "prompts/racing-v2.6.md",
+          "status": "legacy-archived-verbatim-and-verified",
+          "bytes": 80309,
+          "lines": 429
+        },
+        {
+          "key": "racing-v3.1",
+          "path": "prompts/racing-v3.1.md",
+          "status": "historical-frozen-archived",
+          "bytes": 223685,
+          "lines": 1072,
+          "attachment": "prompts/racing-v3.1-attach.md"
+        },
+        {
+          "key": "racing-v3.2",
+          "path": "prompts/racing-v3.2.md",
+          "status": "historical-frozen-archived",
+          "bytes": 252906,
+          "lines": 1195,
+          "attachment": "prompts/racing-v3.2-attach.md"
+        },
+        {
+          "key": "racing-v3.3",
+          "path": "prompts/racing-v3.3.md",
+          "status": "historical-frozen-archived-unchanged",
+          "bytes": 269102,
+          "lines": 1263,
+          "attachment": "prompts/racing-v3.3-attach.md"
+        },
+        {
+          "key": "racing-v3.4",
+          "path": "prompts/racing-v3.4/racing-v3.4.md",
+          "status": "current-race-first-visual-with-14-reference-images",
+          "bytes": 25790,
+          "lines": 406,
+          "attachment": "EXECUTION-ADDENDUM.md"
+        },
+        {
+          "key": "racing-v3.4.1",
+          "path": "prompts/racing-v3.4/racing-v3.4.1.md",
+          "status": "candidate-scenery-density-for-future-runs",
+          "bytes": 37497,
+          "lines": 437,
+          "attachment": "EXECUTION-ADDENDUM.md"
+        }
+      ]
+    },
+    "orbitarium": {
+      "folder": "benchmarks/solar-system",
+      "currentPrompt": "frontier-v2",
+      "prompts": [
+        {
+          "key": "sun-original",
+          "path": "prompts/sun-original.md",
+          "status": "archived-verbatim",
+          "bytes": 7488,
+          "lines": 297
+        },
+        {
+          "key": "frontier-v2",
+          "path": "prompts/frontier-v2.md",
+          "status": "archived-verbatim-and-verified",
+          "bytes": 115983,
+          "lines": 1153
+        }
+      ]
+    }
+  },
+  "runs": [
+    {
+      "key": "racing:gpt-6.1-sol",
+      "benchmark": "racing",
+      "id": "gpt-6.1-sol",
+      "model": "GPT-6.1 Sol",
+      "category": "legacy",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gpt-6.1-sol/source",
+      "recordUrl": null,
+      "prompt": "racing-v2.6"
+    },
+    {
+      "key": "racing:gemini-3.8-flash",
+      "benchmark": "racing",
+      "id": "gemini-3.8-flash",
+      "model": "Gemini 3.8 Flash",
+      "category": "legacy",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gemini-3.8-flash/source",
+      "recordUrl": null,
+      "prompt": "racing-v2.6"
+    },
+    {
+      "key": "racing:gpt-6-astra",
+      "benchmark": "racing",
+      "id": "gpt-6-astra",
+      "model": "GPT-6 Astra",
+      "category": "legacy",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gpt-6-astra/source",
+      "recordUrl": null,
+      "prompt": "racing-v2.6"
+    },
+    {
+      "key": "racing:gemini-3.8-v3.4",
+      "benchmark": "racing",
+      "id": "gemini-3.8-v3.4",
+      "model": "Gemini 3.8 Flash",
+      "category": "non-frontier",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gemini-3.8-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4"
+    },
+    {
+      "key": "racing:gpt-6.1-sol-v3.4",
+      "benchmark": "racing",
+      "id": "gpt-6.1-sol-v3.4",
+      "model": "GPT-6.1 Sol",
+      "category": "current",
+      "order": 0,
+      "liveUrl": "https://racing-gpt-6.1-sol.biel.dev.br/",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gpt-6.1-sol-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4",
+      "scenes": [
+        {
+          "n": 1,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 2,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 3,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 4,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 5,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 6,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 7,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 8,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 9,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 10,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 11,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 12,
+          "w": 1600,
+          "h": 900
+        }
+      ]
+    },
+    {
+      "key": "racing:gpt-6-astra-v3.4",
+      "benchmark": "racing",
+      "id": "gpt-6-astra-v3.4",
+      "model": "GPT-6 Astra",
+      "category": "current",
+      "order": 1,
+      "liveUrl": "https://racing-gpt-6-astra.biel.dev.br/",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gpt-6-astra-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4",
+      "scenes": [
+        {
+          "n": 1,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 2,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 3,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 4,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 5,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 6,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 7,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 8,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 9,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 10,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 11,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 12,
+          "w": 1600,
+          "h": 900
+        }
+      ]
+    },
+    {
+      "key": "racing:opus-5.5-v3.4",
+      "benchmark": "racing",
+      "id": "opus-5.5-v3.4",
+      "model": "Opus 5.5",
+      "category": "current",
+      "order": 2,
+      "liveUrl": "https://racing-opus-5.5.biel.dev.br/",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/opus-5.5-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4",
+      "scenes": [
+        {
+          "n": 1,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 2,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 3,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 4,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 5,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 6,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 7,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 8,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 9,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 10,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 11,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 12,
+          "w": 1600,
+          "h": 900
+        }
+      ]
+    },
+    {
+      "key": "racing:gemini-4-argon-v3.4",
+      "benchmark": "racing",
+      "id": "gemini-4-argon-v3.4",
+      "model": "Gemini 4 Argon",
+      "category": "current",
+      "order": 3,
+      "liveUrl": "https://racing-gemini-4-argon.biel.dev.br/",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gemini-4-argon-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4",
+      "scenes": [
+        {
+          "n": 1,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 2,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 3,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 4,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 5,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 6,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 7,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 8,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 9,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 10,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 11,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 12,
+          "w": 1600,
+          "h": 900
+        }
+      ]
+    },
+    {
+      "key": "racing:sonnet-5.5-v3.4",
+      "benchmark": "racing",
+      "id": "sonnet-5.5-v3.4",
+      "model": "Sonnet 5.5",
+      "category": "current",
+      "order": 4,
+      "liveUrl": "https://racing-sonnet-5.5.biel.dev.br/",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/sonnet-5.5-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4",
+      "scenes": [
+        {
+          "n": 1,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 2,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 3,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 4,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 5,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 6,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 7,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 8,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 9,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 10,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 11,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 12,
+          "w": 1600,
+          "h": 900
+        }
+      ]
+    },
+    {
+      "key": "racing:gemini-4-hydrogen-v3.4",
+      "benchmark": "racing",
+      "id": "gemini-4-hydrogen-v3.4",
+      "model": "Gemini 4 Hydrogen",
+      "category": "current",
+      "order": 5,
+      "liveUrl": "https://racing-gemini-4-hydrogen.biel.dev.br/",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/racing/runs/gemini-4-hydrogen-v3.4/source",
+      "recordUrl": null,
+      "prompt": "racing-v3.4",
+      "scenes": [
+        {
+          "n": 1,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 2,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 3,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 4,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 5,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 6,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 7,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 8,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 9,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 10,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 11,
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "n": 12,
+          "w": 1600,
+          "h": 900
+        }
+      ]
+    },
+    {
+      "key": "orbitarium:gpt-5.6-sun-max-original",
+      "benchmark": "orbitarium",
+      "id": "gpt-5.6-sun-max-original",
+      "model": "GPT-5.6 Sol",
+      "category": "historical",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/gpt-5.6-sun-max/original",
+      "recordUrl": null,
+      "prompt": "sun-original"
+    },
+    {
+      "key": "orbitarium:gpt-5.6-sun-max-frontier-v2",
+      "benchmark": "orbitarium",
+      "id": "gpt-5.6-sun-max-frontier-v2",
+      "model": "GPT-5.6 Sol",
+      "category": "outdated",
+      "order": null,
+      "liveUrl": "https://orbitarium-gpt-5.6-sol-v2.biel.dev.br",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/gpt-5.6-sun-max/rebuild",
+      "recordUrl": null,
+      "prompt": "frontier-v2"
+    },
+    {
+      "key": "orbitarium:gpt-6-astra-max-frontier-v2",
+      "benchmark": "orbitarium",
+      "id": "gpt-6-astra-max-frontier-v2",
+      "model": "GPT-6 Astra",
+      "category": "current",
+      "order": 1,
+      "liveUrl": "https://orbitarium-gpt-6-astra.biel.dev.br",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/gpt-6-astra-max/frontier-v2",
+      "recordUrl": null,
+      "prompt": "frontier-v2"
+    },
+    {
+      "key": "orbitarium:gpt-6.1-sol-source",
+      "benchmark": "orbitarium",
+      "id": "gpt-6.1-sol-source",
+      "model": "GPT-6.1 Sol",
+      "category": "current",
+      "order": 0,
+      "liveUrl": "https://orbitarium-gpt-6.1-sol.biel.dev.br",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/gpt-6.1-sol/source",
+      "recordUrl": null,
+      "prompt": null
+    },
+    {
+      "key": "orbitarium:grok-4.6-frontier-v2",
+      "benchmark": "orbitarium",
+      "id": "grok-4.6-frontier-v2",
+      "model": "Grok 4.6",
+      "category": "outdated",
+      "order": null,
+      "liveUrl": "https://grok-4-6-solar-system.vercel.app",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/grok-4.6/frontier-v2",
+      "recordUrl": null,
+      "prompt": "frontier-v2"
+    },
+    {
+      "key": "orbitarium:grok-4.7-solar-source",
+      "benchmark": "orbitarium",
+      "id": "grok-4.7-solar-source",
+      "model": "Grok 4.7",
+      "category": "current",
+      "order": 2,
+      "liveUrl": "https://orbitarium-grok-4.7.biel.dev.br",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/grok-4.7/source",
+      "recordUrl": null,
+      "prompt": null
+    },
+    {
+      "key": "orbitarium:fable-5.1-frontier-v2",
+      "benchmark": "orbitarium",
+      "id": "fable-5.1-frontier-v2",
+      "model": "Fable 5.1",
+      "category": "current",
+      "order": 3,
+      "liveUrl": "https://fable-solar-system.vercel.app",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/fable/frontier-v2",
+      "recordUrl": null,
+      "prompt": "frontier-v2"
+    },
+    {
+      "key": "orbitarium:gemini-4-argon-source",
+      "benchmark": "orbitarium",
+      "id": "gemini-4-argon-source",
+      "model": "Gemini 4 Argon",
+      "category": "current",
+      "order": 4,
+      "liveUrl": "https://orbitarium-gemini-4-argon.biel.dev.br",
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/gemini-4-argon/source",
+      "recordUrl": null,
+      "prompt": null
+    },
+    {
+      "key": "orbitarium:gemini-3.8-flash-high-frontier-v2",
+      "benchmark": "orbitarium",
+      "id": "gemini-3.8-flash-high-frontier-v2",
+      "model": "Gemini 3.8 Flash",
+      "category": "non-frontier",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": "https://github.com/JouberthAlves/Frontiers-Models/tree/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/runs/gemini-3.8-flash/frontier-v2",
+      "recordUrl": null,
+      "prompt": "frontier-v2"
+    },
+    {
+      "key": "orbitarium:gpt-5.6-luna-max-orbitario",
+      "benchmark": "orbitarium",
+      "id": "gpt-5.6-luna-max-orbitario",
+      "model": "GPT-5.6 Luna",
+      "category": "non-frontier",
+      "order": null,
+      "liveUrl": null,
+      "sourceUrl": null,
+      "recordUrl": "https://github.com/JouberthAlves/Frontiers-Models/blob/a71127c12508e4b7b35e62a711d3ef98986e0f4c/benchmarks/solar-system/RUN-PROVENANCE.md",
+      "prompt": null
+    }
+  ]
+}

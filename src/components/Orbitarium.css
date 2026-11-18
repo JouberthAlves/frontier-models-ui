@@ -1,0 +1,180 @@
+.orbitarium__eyebrow {
+  color: var(--cyan);
+}
+
+.orbitarium__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .orbitarium__layout {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+}
+
+.orbitarium__map {
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+@media (min-width: 1024px) {
+  /* The map stays in view while the list of five scrolls past it. */
+  .orbitarium__map {
+    max-width: none;
+    position: sticky;
+    top: 120px;
+  }
+}
+
+/* ---------- orbit map ---------- */
+.orbit-map {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 600 / 330;
+  overflow: hidden;
+}
+
+.orbit-map__orbit {
+  fill: none;
+  stroke: var(--line-cool);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.orbit-map__spin {
+  transform-box: view-box;
+  transform-origin: 300px 300px;
+}
+
+.orbit-map__counter {
+  transform-box: view-box;
+}
+
+.orbit-map.is-spinning .orbit-map__spin {
+  animation-name: orbit-spin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.orbit-map.is-spinning .orbit-map__counter {
+  animation-name: orbit-counter;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.orbit-map.is-paused .orbit-map__spin,
+.orbit-map.is-paused .orbit-map__counter {
+  animation-play-state: paused;
+}
+
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-counter {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.orbit-map__planet {
+  cursor: pointer;
+  outline: none;
+}
+
+.orbit-map__hit {
+  fill: transparent;
+}
+
+.orbit-map__body {
+  stroke: var(--bg-0);
+  stroke-width: 2;
+}
+
+.orbit-map__ring {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.orbit-map__focus {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  opacity: 0;
+}
+
+.orbit-map__planet:focus-visible .orbit-map__focus {
+  opacity: 1;
+}
+
+.orbit-map__label {
+  fill: var(--ink);
+  font-family: var(--f-body);
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--bg-0);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* ---------- list ---------- */
+.orbitarium__list {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.orbit-card {
+  display: grid;
+  gap: 4px;
+  padding: 16px 20px 14px;
+}
+
+.orbit-card__name {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.orbit-card__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-weight: inherit;
+}
+
+.orbit-card__select .dot {
+  width: 12px;
+  height: 12px;
+}
+
+.orbit-card__prompt {
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.orbit-card__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+}

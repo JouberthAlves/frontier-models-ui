@@ -1,0 +1,344 @@
+<title>Frontier Models UI · Esqueletos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Anybody:wdth,wght@50..150,700..900&family=Doto:wght@700;900&family=Atkinson+Hyperlegible+Next:wght@400;600&family=Red+Hat+Mono:wght@500&display=swap">
+<style>
+/* Layout: três colunas de direção lado a lado (empilham no celular); cada uma com hero desktop, hero celular, ordem das seções e amostras. Cinza e branco: a única cor é a faixa de amostras. */
+:root{
+  --bg:#f3f4f5; --paper:#ffffff; --ink:#1d2024; --muted:#62676e; --line:#c9cdd2;
+  --b1:#d9dce0; --b2:#bfc3c9; --b3:#9ea3aa; --b4:#7d838b; --frame:#2a2e33;
+  --mark:#1d2024;
+  --f-ui:"Atkinson Hyperlegible Next",system-ui,sans-serif;
+  --f-mono:"Red Hat Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#16181b; --paper:#1e2124; --ink:#e8eaed; --muted:#a2a7ae; --line:#3a3f45;
+  --b1:#2c3035; --b2:#3b4047; --b3:#555b63; --b4:#737a83; --frame:#0e0f11; --mark:#e8eaed; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16181b; --paper:#1e2124; --ink:#e8eaed; --muted:#a2a7ae; --line:#3a3f45;
+  --b1:#2c3035; --b2:#3b4047; --b3:#555b63; --b4:#737a83; --frame:#0e0f11; --mark:#e8eaed; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 56px}
+.wrap{max-width:1500px;margin:0 auto;display:grid;gap:28px}
+header.top{display:grid;gap:8px;max-width:820px}
+header.top h1{font-size:clamp(24px,3vw,34px);line-height:1.15;margin:0;text-wrap:balance}
+header.top p{margin:0;color:var(--muted)}
+.brief{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.brief span{font-size:13px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;background:var(--paper)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+@media (max-width:1100px){.cols{grid-template-columns:minmax(0,1fr)}}
+.dir{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:16px;min-width:0}
+.dir h2{margin:0;font-size:22px;line-height:1.2}
+.dir .tag{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.dir .why{margin:0;color:var(--ink)}
+.lbl{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin:0 0 6px}
+/* frames */
+.desk{position:relative;aspect-ratio:16/10;background:var(--b1);border:6px solid var(--frame);border-radius:10px;overflow:hidden;max-width:100%}
+.phonewrap{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:420px){.phonewrap{grid-template-columns:minmax(0,1fr)}}
+.phone{position:relative;aspect-ratio:9/19;background:var(--b1);border:5px solid var(--frame);border-radius:20px;overflow:hidden;max-width:150px}
+.a{position:absolute}
+.bar{background:var(--b3);border-radius:3px}
+.bar.l{background:var(--b2)}
+.box{background:var(--b2);border-radius:4px}
+.btn{background:var(--b4);border-radius:6px;color:var(--paper);font-size:9px;display:grid;place-items:center;font-weight:600;white-space:nowrap}
+.btn.o{background:transparent;border:1.5px solid var(--b4);color:var(--ink)}
+.txt{color:var(--ink);line-height:1}
+.ph{background:var(--b2);border-radius:3px;overflow:hidden}
+.ph::before,.ph::after{content:"";position:absolute;inset:0;background:linear-gradient(to top right,transparent calc(50% - .5px),var(--b3) 50%,transparent calc(50% + .5px)),linear-gradient(to top left,transparent calc(50% - .5px),var(--b3) 50%,transparent calc(50% + .5px))}
+.ph{position:absolute}
+.stroke{color:transparent;-webkit-text-stroke:1.2px var(--b4)}
+.dash{outline:1.5px dashed var(--mark);outline-offset:3px}
+.joker{position:absolute;font-family:var(--f-mono);font-size:9.5px;background:var(--mark);color:var(--paper);padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:3}
+/* radar */
+.ring{position:absolute;border:1.5px solid var(--b3);border-radius:50%}
+.sweep{position:absolute;border-radius:50%;background:conic-gradient(from 20deg,var(--b3) 0deg,transparent 55deg,transparent 360deg);opacity:.7}
+.dot{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--b4);transform:translate(-50%,-50%)}
+/* monitors */
+.mon{background:var(--b2);border:2px solid var(--b3);border-radius:4px;position:relative;overflow:hidden}
+/* section order */
+.order{display:grid;gap:5px}
+.order div{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline;font-size:13.5px;padding:6px 9px;background:var(--b1);border-radius:6px}
+.order b{font-weight:600}
+.order i{font-style:normal;color:var(--muted);font-size:12.5px;grid-column:2}
+.order .j{outline:1.5px dashed var(--mark);outline-offset:-1.5px}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw span{width:34px;height:34px;border-radius:8px;border:1px solid var(--line)}
+.sw span.w{width:62px}
+.facts{display:grid;gap:8px;margin:0}
+.facts div{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;font-size:13.5px}
+.facts dt{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.facts dd{margin:0}
+.fontA{font-family:"Chakra Petch",sans-serif;font-weight:700}
+.fontB{font-family:"Anybody",sans-serif;font-weight:900;font-stretch:125%}
+.fontC{font-family:"Doto",monospace;font-weight:900}
+.specimen{font-size:26px;line-height:1.1;margin:2px 0 0;letter-spacing:-.01em;overflow-wrap:anywhere}
+.note{font-size:13px;color:var(--muted);margin:0}
+footer.foot{max-width:820px;color:var(--muted);font-size:13.5px;display:grid;gap:6px}
+:focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>Frontier Models UI: 3 direções em esqueleto</h1>
+  <p>Escolha a composição. A cor está só na faixa de amostras; a paleta base vem da imagem do README nas três. O tracejado marca o curinga de cada direção.</p>
+  <div class="brief">
+    <span>Referência: planetário do computador de filme antigo</span>
+    <span>Emoção: curiosidade de comparar</span>
+    <span>Colisão: F1 × planetário</span>
+    <span>Nunca: genérico e fraco</span>
+    <span>EN / PT</span>
+    <span>Sem ranking nem nota</span>
+  </div>
+</header>
+
+<div class="cols">
+
+<!-- ============ A ============ -->
+<section class="dir" aria-labelledby="hA">
+  <div>
+    <div class="tag">Direção A</div>
+    <h2 id="hA">Radar da Cúpula</h2>
+  </div>
+  <p class="why">O planetário visto pelo computador de 1979: os anéis do radar são as órbitas, e cada execução é um contato que pisca na cor do modelo. A curiosidade é passar o mouse em cada um.</p>
+
+  <div>
+    <p class="lbl">Primeira tela · desktop 1440</p>
+    <div class="desk" role="img" aria-label="Esqueleto desktop da direção A: radar grande à direita com 11 contatos, título contornado à esquerda">
+      <div class="a box" style="left:3%;top:4%;width:12%;height:4%"></div>
+      <div class="a txt" style="right:3%;top:4.5%;font-size:9px;font-weight:600">EN · PT</div>
+      <div class="ring" style="left:46%;top:9%;width:50%;aspect-ratio:1"></div>
+      <div class="ring" style="left:52.5%;top:19.5%;width:37%;aspect-ratio:1"></div>
+      <div class="ring" style="left:59%;top:30%;width:24%;aspect-ratio:1"></div>
+      <div class="sweep" style="left:46%;top:9%;width:50%;aspect-ratio:1"></div>
+      <div class="dot" style="left:58%;top:28%"></div><div class="dot" style="left:83%;top:24%"></div>
+      <div class="dot" style="left:90%;top:55%"></div><div class="dot" style="left:64%;top:70%"></div>
+      <div class="dot" style="left:76%;top:84%"></div><div class="dot" style="left:55%;top:52%"></div>
+      <div class="dot" style="left:69%;top:40%"></div><div class="dot" style="left:80%;top:66%"></div>
+      <div class="dot" style="left:62%;top:89%"></div><div class="dot" style="left:87%;top:38%"></div><div class="dot" style="left:73%;top:58%"></div>
+      <div class="a box" style="left:66%;top:44%;width:17%;height:9%;background:var(--paper);border:1px solid var(--b4)"></div>
+      <div class="a txt" style="left:67.5%;top:47%;font-size:8px;font-weight:700">OPUS 5.5 · Racing</div>
+      <div class="joker" style="left:47%;top:93%">curinga: cada contato é uma execução real</div>
+      <div class="a txt stroke dash fontA" style="left:4%;top:24%;font-size:clamp(18px,3.4vw,46px)">FRONTIER<br>MODELS</div>
+      <div class="a bar" style="left:4%;top:56%;width:34%;height:3%"></div>
+      <div class="a txt" style="left:4%;top:61%;font-size:8px;font-family:var(--f-mono)">&gt; 11 execuções rastreadas · 2 benchmarks_</div>
+      <div class="a btn" style="left:4%;top:70%;width:16%;height:7%">Ver Racing</div>
+      <div class="a btn o" style="left:22%;top:70%;width:18%;height:7%">Ver Orbitarium</div>
+    </div>
+  </div>
+
+  <div class="phonewrap">
+    <div>
+      <p class="lbl">Celular 390</p>
+      <div class="phone" role="img" aria-label="Esqueleto celular da direção A: radar no topo, título e lista de contatos abaixo">
+        <div class="a box" style="left:7%;top:3%;width:30%;height:2.5%"></div>
+        <div class="ring" style="left:8%;top:8%;width:84%;aspect-ratio:1"></div>
+        <div class="ring" style="left:24%;top:15.5%;width:52%;aspect-ratio:1"></div>
+        <div class="sweep" style="left:8%;top:8%;width:84%;aspect-ratio:1"></div>
+        <div class="dot" style="left:30%;top:16%"></div><div class="dot" style="left:72%;top:20%"></div><div class="dot" style="left:60%;top:35%"></div><div class="dot" style="left:35%;top:38%"></div>
+        <div class="a txt stroke fontA" style="left:8%;top:51%;font-size:17px">FRONTIER<br>MODELS</div>
+        <div class="a bar l" style="left:8%;top:64%;width:80%;height:1.6%"></div>
+        <div class="a box" style="left:8%;top:69%;width:26%;height:3.6%;border-radius:99px"></div><div class="a box" style="left:37%;top:69%;width:26%;height:3.6%;border-radius:99px"></div><div class="a box" style="left:66%;top:69%;width:26%;height:3.6%;border-radius:99px"></div>
+        <div class="a btn" style="left:8%;top:86%;width:84%;height:5%">Ver Racing</div>
+      </div>
+    </div>
+    <div>
+      <p class="lbl">Página inteira</p>
+      <div class="order">
+        <div><b>1</b><span>Radar: hero com os 11 contatos</span></div>
+        <div><b>2</b><span>Os dois benchmarks</span><i>painéis quente e frio da imagem do README</i></div>
+        <div><b>3</b><span>Muro de boxes do Racing</span><i>tabela tipo torre de cronometragem, na ordem do arquivo, sem posição</i></div>
+        <div class="j"><b>4</b><span>Comparar cena</span><i>escolhe S1–S12 e dois modelos, régua arrastável entre os prints</i></div>
+        <div><b>5</b><span>Orbitarium em anéis</span><i>5 modelos girando em órbita</i></div>
+        <div><b>6</b><span>Faixa de proveniência</span><i>prompt, commit, SHA-256</i></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="lbl">Amostras</p>
+    <div class="sw" aria-label="Paleta da direção A">
+      <span class="w" style="background:#080f1d" title="#080f1d fundo"></span>
+      <span style="background:#85e4eb" title="#85e4eb radar"></span>
+      <span style="background:#fdaf6d" title="#fdaf6d racing"></span>
+      <span style="background:#83caff" title="#83caff orbitarium"></span>
+      <span style="background:#ff99cc" title="#ff99cc um modelo"></span>
+    </div>
+  </div>
+  <dl class="facts">
+    <div><dt>Fontes</dt><dd>Chakra Petch (títulos, cara de painel de instrumento) + Atkinson Hyperlegible Next (texto) + Red Hat Mono (só dados reais)<div class="specimen fontA">FRONTIER MODELS</div></dd></div>
+    <div><dt>Fundo</dt><dd>Radar do React Bits em ciano, com varredura e brilho de fósforo</dd></div>
+    <div><dt>Efeitos</dt><dd>Stroke Text tracejado no título · Split Flap no nome do contato · Decrypted Text na linha de console · Target Cursor ao travar num contato</dd></div>
+    <div><dt>Movimento</dt><dd>Radar liga em 1,4 s; o título se desenha em 1,6 s; cada contato só aparece quando a varredura passa por ele</dd></div>
+  </dl>
+</section>
+
+<!-- ============ B ============ -->
+<section class="dir" aria-labelledby="hB">
+  <div>
+    <div class="tag">Direção B</div>
+    <h2 id="hB">Pista e Céu</h2>
+  </div>
+  <p class="why">A colisão literal: metade pista noturna, metade céu de planetário, costuradas pela diagonal laranja→ciano da imagem do README. O título atravessa as duas e troca de cor no cruzamento.</p>
+
+  <div>
+    <p class="lbl">Primeira tela · desktop 1440</p>
+    <div class="desk" role="img" aria-label="Esqueleto desktop da direção B: tela dividida na diagonal, título largo atravessando, barra de comparação embaixo">
+      <div class="a" style="inset:0;background:var(--b2);clip-path:polygon(0 0,58% 0,42% 100%,0 100%)"></div>
+      <div class="a dash" style="left:49.6%;top:-5%;width:1.4%;height:110%;background:var(--b4);transform:rotate(9deg);transform-origin:center"></div>
+      <div class="joker" style="left:52%;top:8%">curinga: a costura onde o título muda de cor</div>
+      <div class="a bar l" style="left:4%;top:16%;width:26%;height:2%"></div>
+      <div class="a bar l" style="left:4%;top:21%;width:20%;height:2%"></div>
+      <div class="a box" style="left:73%;top:15%;width:5px;height:5px;border-radius:50%"></div><div class="a box" style="left:84%;top:28%;width:4px;height:4px;border-radius:50%"></div><div class="a box" style="left:91%;top:12%;width:6px;height:6px;border-radius:50%"></div><div class="a box" style="left:66%;top:34%;width:4px;height:4px;border-radius:50%"></div>
+      <div class="a txt fontB" style="left:4%;top:33%;font-size:clamp(20px,4vw,56px);line-height:.92">FRONTIER<br>MODELS</div>
+      <div class="a txt" style="left:4%;top:66%;font-size:8.5px;width:40%">Os mesmos prompts. 11 projetos completos. Compare cena por cena.</div>
+      <div class="a box" style="left:0;bottom:0;width:100%;height:13%;background:var(--b3);border-radius:0"></div>
+      <div class="a txt" style="left:3%;bottom:4.5%;font-size:8px;font-weight:700;color:var(--paper)">Comparar:</div>
+      <div class="a box" style="left:13%;bottom:3.5%;width:12%;height:6%;border-radius:99px;background:var(--paper)"></div>
+      <div class="a box" style="left:27%;bottom:3.5%;width:12%;height:6%;border-radius:99px;background:var(--paper)"></div>
+      <div class="a box" style="left:41%;bottom:3.5%;width:12%;height:6%;border-radius:99px;background:var(--b2)"></div>
+      <div class="a btn" style="right:3%;bottom:3%;width:16%;height:7%;background:var(--paper);color:var(--ink)">Ver lado a lado</div>
+    </div>
+  </div>
+
+  <div class="phonewrap">
+    <div>
+      <p class="lbl">Celular 390</p>
+      <div class="phone" role="img" aria-label="Esqueleto celular da direção B: diagonal no topo, título largo, barra de comparação fixa embaixo">
+        <div class="a" style="inset:0 0 40% 0;background:var(--b2);clip-path:polygon(0 0,100% 0,100% 30%,0 70%)"></div>
+        <div class="a" style="left:-10%;top:28%;width:120%;height:1.2%;background:var(--b4);transform:rotate(-22deg)"></div>
+        <div class="a txt fontB" style="left:8%;top:44%;font-size:19px;line-height:.92">FRONTIER<br>MODELS</div>
+        <div class="a bar l" style="left:8%;top:60%;width:80%;height:1.6%"></div>
+        <div class="a bar l" style="left:8%;top:64%;width:60%;height:1.6%"></div>
+        <div class="a box" style="left:0;bottom:0;width:100%;height:12%;background:var(--b3);border-radius:0"></div>
+        <div class="a box" style="left:7%;bottom:4%;width:24%;height:4%;border-radius:99px;background:var(--paper)"></div>
+        <div class="a box" style="left:34%;bottom:4%;width:24%;height:4%;border-radius:99px;background:var(--paper)"></div>
+        <div class="a btn" style="right:6%;bottom:3.6%;width:30%;height:4.8%;font-size:7px">Comparar</div>
+      </div>
+    </div>
+    <div>
+      <p class="lbl">Página inteira</p>
+      <div class="order">
+        <div><b>1</b><span>Pista e céu: hero dividido</span></div>
+        <div><b>2</b><span>Barra de comparação fixa</span><i>escolhe 2 ou 3 modelos, como o rastreador de pilotos da transmissão da F1</i></div>
+        <div><b>3</b><span>Grade cena × modelo</span><i>12 cenas em trilho horizontal, uma linha por modelo escolhido</i></div>
+        <div><b>4</b><span>Orbitarium</span><i>os 5 projetos como planetas; clicar abre a ficha</i></div>
+        <div><b>5</b><span>Versões do prompt</span><i>abas V2.6 → V3.4.1 com o que mudou</i></div>
+        <div><b>6</b><span>Arquivo e código</span><i>links do site ao vivo e da cópia arquivada</i></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="lbl">Amostras</p>
+    <div class="sw" aria-label="Paleta da direção B">
+      <span class="w" style="background:#302337" title="#302337 lado da pista"></span>
+      <span class="w" style="background:#17283b" title="#17283b lado do céu"></span>
+      <span style="background:linear-gradient(90deg,#ffb76b,#80e9f2)" title="costura laranja→ciano"></span>
+      <span style="background:#f1f6fd" title="#f1f6fd texto"></span>
+      <span style="background:#facc6b" title="#facc6b um modelo"></span>
+    </div>
+  </div>
+  <dl class="facts">
+    <div><dt>Fontes</dt><dd>Anybody (eixo de largura variável: o título estica como borrão de velocidade ao rolar) + Atkinson Hyperlegible Next + Red Hat Mono<div class="specimen fontB">FRONTIER MODELS</div></dd></div>
+    <div><dt>Fundo</dt><dd>Galaxy do React Bits (um canvas só), com o lado da pista tingido de vinho e rastros de luz quentes</dd></div>
+    <div><dt>Efeitos</dt><dd>Stroke Text em laranja de um lado e ciano do outro · Echo Text nos nomes do lado Racing · Star Border nos cards do Orbitarium · Count Up só em contagem (11 execuções, 12 cenas)</dd></div>
+    <div><dt>Movimento</dt><dd>Linhas do título sobem em 0,7 s com 80 ms entre elas; ao rolar, a largura do título passa de 75 para 150; as seções trocam de tom (quente ↔ frio) em 0,7 s ao chegar</dd></div>
+  </dl>
+</section>
+
+<!-- ============ C ============ -->
+<section class="dir" aria-labelledby="hC">
+  <div>
+    <div class="tag">Direção C</div>
+    <h2 id="hC">Computador Central</h2>
+  </div>
+  <p class="why">O computador de bordo dos filmes encontra a parede de monitores do controle de corrida: o site liga como um CRT, e o visitante digita a comparação que quer ver.</p>
+
+  <div>
+    <p class="lbl">Primeira tela · desktop 1440</p>
+    <div class="desk" role="img" aria-label="Esqueleto desktop da direção C: console CRT à esquerda com prompt editável, parede de 12 monitores à direita">
+      <div class="a bar l" style="left:0;top:0;width:100%;height:5%;border-radius:0"></div>
+      <div class="a txt" style="left:3%;top:1.3%;font-size:7.5px;font-family:var(--f-mono)">FRONTIER MODELS · 11 execuções · EN / PT</div>
+      <div class="a box" style="left:3%;top:11%;width:42%;height:80%;border-radius:18px;background:var(--b2);border:3px solid var(--b4)"></div>
+      <div class="a txt fontC" style="left:7%;top:18%;font-size:clamp(16px,2.7vw,36px);line-height:1">FRONTIER<br>MODELS</div>
+      <div class="a txt dash" style="left:7%;top:50%;font-size:8.5px;font-family:var(--f-mono);padding:4px 5px">&gt; COMPARAR [GPT-6.1 SOL ▾] × [OPUS 5.5 ▾]_</div>
+      <div class="joker" style="left:7%;top:58%">curinga: o prompt editável</div>
+      <div class="a bar" style="left:7%;top:68%;width:30%;height:2%"></div>
+      <div class="a bar l" style="left:7%;top:73%;width:24%;height:2%"></div>
+      <div class="a btn" style="left:7%;top:80%;width:15%;height:6%">Executar</div>
+      <div class="a" style="left:48%;top:11%;width:49%;height:80%;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:5px">
+        <div class="mon"></div><div class="mon"></div><div class="mon"></div><div class="mon"></div>
+        <div class="mon"></div><div class="mon"></div><div class="mon"></div><div class="mon"></div>
+        <div class="mon"></div><div class="mon"></div><div class="mon"></div><div class="mon"></div>
+      </div>
+      <div class="a txt" style="left:48%;top:93%;font-size:8px;font-family:var(--f-mono)">S1 reta da orla … S12 mapa · imagens reais das execuções</div>
+    </div>
+  </div>
+
+  <div class="phonewrap">
+    <div>
+      <p class="lbl">Celular 390</p>
+      <div class="phone" role="img" aria-label="Esqueleto celular da direção C: console com prompt no topo, monitores em 2 colunas abaixo">
+        <div class="a bar l" style="left:0;top:0;width:100%;height:3%;border-radius:0"></div>
+        <div class="a box" style="left:6%;top:6%;width:88%;height:38%;border-radius:14px;background:var(--b2);border:2px solid var(--b4)"></div>
+        <div class="a txt fontC" style="left:12%;top:11%;font-size:16px;line-height:1">FRONTIER<br>MODELS</div>
+        <div class="a txt" style="left:12%;top:27%;font-size:6.5px;font-family:var(--f-mono)">&gt; COMPARAR [SOL ▾] × [OPUS ▾]_</div>
+        <div class="a btn" style="left:12%;top:35%;width:34%;height:4.5%;font-size:7px">Executar</div>
+        <div class="a" style="left:6%;top:48%;width:88%;height:48%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:4px">
+          <div class="mon"></div><div class="mon"></div><div class="mon"></div><div class="mon"></div><div class="mon"></div><div class="mon"></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="lbl">Página inteira</p>
+      <div class="order">
+        <div><b>1</b><span>Console: ignição e prompt</span></div>
+        <div><b>2</b><span>Parede de monitores</span><i>12 cenas do modelo escolhido; o botão A/B troca para o outro</i></div>
+        <div><b>3</b><span>Gabinetes, um por vez</span><i>vitrine fixa como a do Motionshelf: cada execução num gabinete aceso na cor do modelo</i></div>
+        <div><b>4</b><span>Carta estelar do Orbitarium</span><i>linhas tracejadas ligando os 5 projetos (Tech Text)</i></div>
+        <div><b>5</b><span>Fita do arquivo</span><i>proveniência impressa como saída de teletipo</i></div>
+        <div><b>6</b><span>Desligar</span><i>rodapé que apaga como CRT</i></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="lbl">Amostras</p>
+    <div class="sw" aria-label="Paleta da direção C">
+      <span class="w" style="background:#0b1726" title="#0b1726 fundo"></span>
+      <span style="background:#0e2034" title="#0e2034 vidro do CRT"></span>
+      <span style="background:#85e4eb" title="#85e4eb fósforo"></span>
+      <span style="background:#ffb76b" title="#ffb76b alerta e cursor"></span>
+      <span style="background:#b7cbe1" title="#b7cbe1 texto secundário"></span>
+    </div>
+  </div>
+  <dl class="facts">
+    <div><dt>Fontes</dt><dd>Doto (matriz de pontos, como placa de box e tela de computador antigo) + Atkinson Hyperlegible Next + Red Hat Mono. Exceção declarada: mono e caixa alta são o material do console<div class="specimen fontC">FRONTIER MODELS</div></dd></div>
+    <div><dt>Fundo</dt><dd>Scanner do React Bits (linhas de interferência com feixe de varredura e acabamento CRT), com ignição de 1,4 s</dd></div>
+    <div><dt>Efeitos</dt><dd>Decrypted Text nas respostas do console · Text Type no prompt · Split Flap nos nomes dos gabinetes · Stroke Text no título de cada seção</dd></div>
+    <div><dt>Movimento</dt><dd>A tela liga com uma linha branca que abre; hovers trocam de estado num quadro (steps); o cursor pisca 5 vezes e para; os monitores acendem um a um em 60 ms</dd></div>
+  </dl>
+</section>
+
+</div>
+
+<footer class="foot">
+  <p>Nas três: um efeito de assinatura só (o resto quieto), tudo para fora da tela, e o movimento reduzido mostra o estado final parado. Fundo quadriculado, degradê azul e a paleta da imagem do README entram como exceção pedida.</p>
+  <p>Mockups coloridos: Magnific (GPT 2, 16:9, 2k), 375 créditos.</p>
+</footer>
+
+<section class="mocks" aria-labelledby="hM">
+  <h2 id="hM" style="margin:0;font-size:22px">Mockups coloridos</h2>
+  <figure><img src="mockup-a-radar.png" alt="Mockup da direção A, Radar da Cúpula: notebook e celular com radar ciano e contatos coloridos, título contornado em laranja" loading="lazy"><figcaption><b>A · Radar da Cúpula.</b> O título contornado e o radar com a mira travada no Opus 5.5 saíram como pedido.</figcaption></figure>
+  <figure><img src="mockup-b-pista-ceu.png" alt="Mockup da direção B, Pista e Céu: tela dividida na diagonal entre pista com rastros laranja e galáxia azul, título largo atravessando" loading="lazy"><figcaption><b>B · Pista e Céu.</b> O gerador usou uma fonte itálica no lugar da Anybody larga, e a galáxia tem cara de foto. No site, o céu seria o shader Galaxy e o título, a Anybody.</figcaption></figure>
+  <figure><img src="mockup-c-computador.png" alt="Mockup da direção C, Computador Central: console CRT com título em matriz de pontos e prompt editável, parede de 12 monitores com cenas de corrida" loading="lazy"><figcaption><b>C · Computador Central.</b> As cenas de corrida nos monitores foram inventadas pelo gerador. No site, entram os prints reais S1–S12 de cada execução.</figcaption></figure>
+</section>
+<style>
+.mocks{display:grid;gap:18px}
+.mocks figure{margin:0;display:grid;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px}
+.mocks img{width:100%;height:auto;border-radius:8px;display:block}
+.mocks figcaption{font-size:14px;color:var(--muted)}
+.mocks figcaption b{color:var(--ink)}
+</style>
+</div>

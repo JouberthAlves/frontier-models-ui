@@ -1,0 +1,53 @@
+:root {
+  /* color */
+  --bg-0: #080f1d;
+  --bg-1: #0b1726;
+  --bg-2: #101e35;
+  --track-0: #302337;
+  --track-1: #222235;
+  --sky-0: #17283b;
+  --sky-1: #14243a;
+  --card: #0e2034;
+  --line: #25415d;
+  --line-warm: #7d5565;
+  --line-cool: #3e617f;
+  --ink: #f1f6fd;
+  --ink-2: #b7cbe1;
+  --ink-3: #8fa5bf; /* only on --bg-0 / --card (7.5:1 and 6.4:1) */
+  --warm: #fdaf6d;
+  --warm-2: #ffb76b;
+  --warm-soft: #ffc99d;
+  --cool: #83caff;
+  --cyan: #85e4eb;
+  --cyan-2: #80e9f2;
+  --seam: linear-gradient(180deg, #ffb76b, #80e9f2);
+  --seam-x: linear-gradient(90deg, #ffb76b, #80e9f2);
+  --off-arena: #8fa5bf;
+
+  /* type */
+  --f-display: 'Anybody', 'Arial Narrow', sans-serif;
+  --f-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --f-data: 'Red Hat Mono', ui-monospace, monospace;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-rise: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-draw: cubic-bezier(0.33, 1, 0.68, 1);
+  --t-micro: 120ms;
+  --t-short: 220ms;
+  --t-long: 420ms;
+  --t-section: 700ms;
+
+  /* shape */
+  --r-card: 14px;
+  --r-chip: 999px;
+  --r-img: 10px;
+
+  /* layout */
+  --page-max: 1240px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --nav-h: 64px;
+  --bar-h: 88px;
+
+  color-scheme: dark;
+}

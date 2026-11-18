@@ -1,0 +1,251 @@
+.hero {
+  --hero-h: max(640px, min(100svh, 980px));
+  position: relative;
+  min-height: var(--hero-h);
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- track side ---------- */
+.hero__track {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 20%, 0 36%);
+  background: linear-gradient(115deg, var(--track-0), var(--track-1) 70%, transparent);
+  opacity: 0.92;
+}
+
+.hero__trails {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+/* ---------- seam ---------- */
+.hero__seam {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 20%;
+  height: 16%;
+  transform-origin: top center;
+  pointer-events: none;
+}
+
+.hero__seam svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  overflow: visible;
+}
+
+.hero__seam-halo {
+  filter: blur(12px);
+  opacity: 0.55;
+}
+
+@media (min-width: 900px) {
+  .hero__track {
+    clip-path: polygon(0 0, 58% 0, 42% 100%, 0 100%);
+  }
+
+  .hero__seam {
+    top: 0;
+    bottom: 0;
+    left: 42%;
+    right: auto;
+    width: 16%;
+    height: auto;
+  }
+}
+
+/* ---------- content ---------- */
+.hero__inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+  width: 100%;
+  padding: calc(var(--hero-h) * 0.22) max(16px, 6vw) 72px;
+}
+
+.hero__title {
+  width: 100%;
+  container-type: inline-size;
+  font-weight: inherit;
+}
+
+.hero__title-art {
+  position: relative;
+  display: block;
+  font-size: min(clamp(56px, 12.5vw, 220px), calc(100cqi / var(--title-wem, 6.6)));
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+}
+
+.hero__title-copy {
+  display: block;
+  clip-path: var(--clip-track);
+}
+
+.hero__title-copy--sky {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--clip-sky);
+}
+
+.hero__title-motion {
+  display: block;
+  transform-origin: left center;
+}
+
+.hero__title-art .stroke-text__line {
+  transform-origin: left center;
+}
+
+.hero__lede {
+  max-width: 30ch;
+  color: var(--ink-2);
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.hero__stat {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 24px;
+  border-left: 1px solid var(--line);
+}
+
+.hero__stat:last-child {
+  border-right: 1px solid var(--line);
+}
+
+.hero__stat-value {
+  font-family: var(--f-display);
+  font-size: 56px;
+  font-stretch: 112%;
+  font-variation-settings: 'wdth' 112;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__stat-label {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero__action {
+  display: inline-flex;
+}
+
+@media (max-width: 599px) {
+  .hero__inner {
+    gap: 22px;
+  }
+
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hero__stat {
+    padding: 4px 10px;
+  }
+
+  .hero__stat-value {
+    font-size: 38px;
+  }
+
+  .hero__stat-label {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .hero__actions {
+    width: 100%;
+  }
+
+  .hero__action,
+  .hero__action .btn {
+    flex: 1 1 auto;
+  }
+
+  .hero__action {
+    display: flex;
+  }
+}
+
+/* ---------- ignition ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .hero__track {
+    opacity: 0;
+    transition: opacity 600ms linear;
+  }
+
+  .hero__seam {
+    transform: scaleY(0);
+    transition: transform 900ms var(--ease-rise) 150ms;
+  }
+
+  .hero__lede,
+  .hero__stat,
+  .hero__action {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 700ms var(--ease-rise),
+      transform 700ms var(--ease-rise);
+  }
+
+  .hero__lede {
+    transition-delay: 1900ms;
+  }
+
+  .hero__stat {
+    transition-delay: calc(2050ms + var(--i, 0) * 80ms);
+  }
+
+  .hero__action {
+    transition-delay: calc(2200ms + var(--i, 0) * 80ms);
+  }
+
+  [data-ignited] .hero__track {
+    opacity: 0.92;
+  }
+
+  [data-ignited] .hero__seam {
+    transform: none;
+  }
+
+  [data-ignited] .hero__lede,
+  [data-ignited] .hero__stat,
+  [data-ignited] .hero__action {
+    opacity: 1;
+    transform: none;
+  }
+}

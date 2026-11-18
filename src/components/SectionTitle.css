@@ -1,0 +1,10 @@
+.section-title--stroke {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.section-title__art {
+  display: block;
+  font-size: min(clamp(36px, 6vw, 88px), calc(100cqi / var(--title-wem, 9)));
+  line-height: 0.86;
+}

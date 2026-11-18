@@ -1,0 +1,186 @@
+/*
+ * Adapted from React Bits: https://github.com/DavidHDev/react-bits/blob/main/src/ts-default/TextAnimations/SplitFlapText/SplitFlapText.css
+ * Changes for Frontier Models UI: display font, word groups, transform-only keyframes, no glare/shade filters.
+ *
+ * MIT + Commons Clause License Condition v1.0
+ *
+ * Copyright (c) 2026 David Haz
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, and distribute the Software as part of
+ * an application, website, or product, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * Commons Clause Restriction: You may use this Software, including for any
+ * commercial purpose, so long as you do not sell, sublicense, or redistribute the
+ * components themselves - whether alone, in a bundle, or as a ported version.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+.split-flap-text {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 0.18em;
+  max-width: 100%;
+  color: var(--split-flap-text-color);
+  font-family: var(--f-display);
+  font-stretch: 100%;
+  font-variation-settings: 'wdth' 100;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+}
+
+.split-flap-text__word {
+  display: inline-flex;
+  gap: 0.06em;
+  white-space: pre;
+}
+
+.split-flap-text__tile {
+  position: relative;
+  flex: none;
+  width: 0.8em;
+  height: 1.12em;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 201, 157, 0.14);
+  background: var(--split-flap-tile-color);
+  perspective: 10em;
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+
+.split-flap-text__tile.is-space {
+  width: 0.36em;
+  background: transparent;
+  box-shadow: none;
+}
+
+.split-flap-text__tile:not(.is-space)::before {
+  content: '';
+  position: absolute;
+  z-index: 8;
+  top: calc(50% - 0.5px);
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(8, 15, 29, 0.7);
+  pointer-events: none;
+}
+
+.split-flap-text__half,
+.split-flap-text__flap {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  overflow: hidden;
+  background: var(--split-flap-tile-color);
+  backface-visibility: hidden;
+}
+
+.split-flap-text__tile.is-space .split-flap-text__half {
+  background: transparent;
+}
+
+.split-flap-text__half--top,
+.split-flap-text__flap--front {
+  top: 0;
+}
+
+.split-flap-text__half--bottom,
+.split-flap-text__flap--back {
+  bottom: 0;
+}
+
+.split-flap-text__half--bottom::after,
+.split-flap-text__flap--back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.split-flap-text__tile.is-space .split-flap-text__half--bottom::after {
+  display: none;
+}
+
+.split-flap-text__char {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 200%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--split-flap-text-color);
+}
+
+.split-flap-text__half--top .split-flap-text__char,
+.split-flap-text__flap--front .split-flap-text__char {
+  top: 0;
+}
+
+.split-flap-text__half--bottom .split-flap-text__char,
+.split-flap-text__flap--back .split-flap-text__char {
+  bottom: 0;
+}
+
+.split-flap-text__flap {
+  z-index: 6;
+  transform-style: preserve-3d;
+}
+
+.split-flap-text__flap--front {
+  transform-origin: center bottom;
+  animation: split-flap-front var(--split-flap-flip-duration, 0.12s) linear both;
+}
+
+.split-flap-text__flap--back {
+  transform-origin: center top;
+  transform: rotateX(90deg);
+  animation: split-flap-back var(--split-flap-flip-duration, 0.12s) linear both;
+}
+
+@keyframes split-flap-front {
+  0% {
+    transform: rotateX(0deg);
+    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  }
+  50%,
+  100% {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes split-flap-back {
+  0%,
+  50% {
+    transform: rotateX(90deg);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .split-flap-text__flap {
+    animation: none !important;
+    display: none;
+  }
+}

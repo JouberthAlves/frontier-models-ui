@@ -1,0 +1,240 @@
+.viewer {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.viewer::backdrop {
+  background: rgba(4, 8, 16, 0.94);
+}
+
+.viewer[open] {
+  display: flex;
+}
+
+.viewer__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  animation: viewer-in var(--t-short) var(--ease-out) both;
+}
+
+@keyframes viewer-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.viewer__stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.viewer__compare,
+.viewer__single {
+  position: relative;
+  width: min(100%, calc((100svh - 190px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r-img);
+  background: var(--bg-1);
+}
+
+.viewer__compare {
+  touch-action: none;
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.viewer__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.viewer__top {
+  position: absolute;
+  inset: 0;
+}
+
+.viewer__tag {
+  position: absolute;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 45%;
+  padding: 6px 12px;
+  border-radius: var(--r-chip);
+  background: rgba(8, 15, 29, 0.78);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.viewer__tag--a {
+  left: 12px;
+}
+
+.viewer__tag--b {
+  right: 12px;
+}
+
+/* the track spans the frame and is translated by --pos% of its own width */
+.viewer__handle-track {
+  position: absolute;
+  inset: 0;
+  transform: translateX(calc(var(--pos, 50) * 1%));
+  pointer-events: none;
+}
+
+.viewer__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -22px;
+  width: 44px;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: ew-resize;
+  outline: none;
+}
+
+.viewer__handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 21px;
+  width: 2px;
+  background: var(--ink);
+}
+
+.viewer__knob {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg-0);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.1em;
+}
+
+.viewer__handle:focus-visible .viewer__knob {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.viewer__bar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  width: min(100%, 1400px);
+  margin-inline: auto;
+}
+
+.viewer__meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.viewer__names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-weight: 600;
+}
+
+.viewer__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.viewer__scene {
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.viewer__pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.viewer__pair select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.viewer__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.viewer__nav {
+  width: 48px;
+  padding: 0;
+  font-size: 20px;
+}
+
+@media (max-width: 599px) {
+  .viewer__compare,
+  .viewer__single {
+    width: 100%;
+  }
+
+  .viewer__actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .viewer__actions .btn--ink {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 599px) {
+  /* The footer already names both models; on a small picture the tags would cover it. */
+  .viewer__tag {
+    display: none;
+  }
+}
