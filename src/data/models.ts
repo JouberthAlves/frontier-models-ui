@@ -6,6 +6,7 @@ const COLORS: Record<string, string> = {
   'orbitarium:gpt-6.1-sol-source': '#facc6b',
   'racing:gpt-6-astra-v3.4': '#aaa7ff',
   'orbitarium:gpt-6-astra-max-frontier-v2': '#aaa7ff',
+  'racing:gpt-astra-6.2-v3.4.1': '#b5b2ff',
   'racing:opus-5.5-v3.4': '#ff99cc',
   'racing:gemini-4-argon-v3.4': '#8df0a4',
   'orbitarium:gemini-4-argon-source': '#83caff',
@@ -24,6 +25,7 @@ export const colorOf = (run: Pick<Run, 'key' | 'category'>): string =>
 const SHORT: Record<string, string> = {
   'gpt-6.1-sol-v3.4': 'Sol',
   'gpt-6-astra-v3.4': 'Astra',
+  'gpt-astra-6.2-v3.4.1': 'Astra 6.2',
   'opus-5.5-v3.4': 'Opus',
   'gemini-4-argon-v3.4': 'Argon',
   'fable-5.2-v3.4.1': 'Fable',

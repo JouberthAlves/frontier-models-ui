@@ -2,7 +2,7 @@
 // Sync script: reads the Frontier Models fork READ-ONLY (git show / git ls-tree at a pinned
 // commit) and writes src/data/archive.json + public/scenes/<runId>/s<N>-{640,1600}.webp.
 //
-// Usage: npm run sync -- --fork ../Frontiers-Models --commit 9c4e687
+// Usage: npm run sync -- --fork ../Frontiers-Models --commit 1bd3430
 // Nothing is ever written inside the fork.
 
 import { execFileSync } from 'node:child_process';
@@ -13,7 +13,7 @@ import sharp from 'sharp';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_FORK = '../Frontiers-Models';
-const DEFAULT_COMMIT = '9c4e6872166452aacd75478ea715f0428fbdeba5';
+const DEFAULT_COMMIT = '1bd3430e3c6f24500f363f956a51bf66e34a0ca0';
 const REPO = 'JouberthAlves/Frontiers-Models';
 const MAX_BUFFER = 64 * 1024 * 1024;
 
@@ -266,12 +266,15 @@ async function main() {
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const orbitCurrent = orbitRuns.filter(run => run.category === 'current');
 
-  if (racingCurrent.length !== 6) throw new Error(`expected 6 current racing runs, got ${racingCurrent.length}`);
-  if (orbitCurrent.length !== 5) throw new Error(`expected 5 current orbitarium runs, got ${orbitCurrent.length}`);
+  // Counts come from the data: a new run in either arena needs no edit here.
+  if (!racingCurrent.length) throw new Error('no current racing runs');
+  if (!orbitCurrent.length) throw new Error('no current orbitarium runs');
+  console.log(`racing ${racingCurrent.length} current · orbitarium ${orbitCurrent.length} current`);
 
   await buildScenes(racingCurrent);
   const sceneCount = racingCurrent.reduce((sum, run) => sum + run.scenes.length, 0);
-  if (sceneCount !== 72) throw new Error(`expected 72 scenes, got ${sceneCount}`);
+  const expectedScenes = racingCurrent.length * 12;
+  if (sceneCount !== expectedScenes) throw new Error(`expected ${expectedScenes} scenes, got ${sceneCount}`);
 
   const archive = {
     repo: REPO,
