@@ -34,7 +34,7 @@ export default function SpiralStill() {
       const width = section.clientWidth;
       const cx = anchor.x - window.scrollX - box.left;
       const coreY = anchor.y - window.scrollY - box.top;
-      const radius = spiralRadius(width, STILL_VIEW_H);
+      const radius = spiralRadius(width, STILL_VIEW_H, anchor.gap);
       // Never above the section: the end of the race map is there.
       const top = Math.max(0, Math.round(coreY - radius * REACH));
       const height = Math.max(1, Math.round(Math.min(box.height - top, coreY + radius * REACH - top)));

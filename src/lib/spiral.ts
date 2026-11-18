@@ -15,9 +15,9 @@ export const SPIRAL_POINTS = { desktop: 7000, phone: 3000 } as const;
 export const SKY_STARS = 600;
 /** One turn every 6 minutes. */
 export const SPIRAL_TURN_SECONDS = 360;
-/** The disc is seen from 60 degrees (flattened to half its height) and rolled a little on screen. */
-export const SPIRAL_TILT = (60 * Math.PI) / 180;
-export const SPIRAL_ROLL = (-16 * Math.PI) / 180;
+/** The disc is seen almost face-on (tilted 24 degrees) and rolled a little on screen, like the reference. */
+export const SPIRAL_TILT = (24 * Math.PI) / 180;
+export const SPIRAL_ROLL = (-10 * Math.PI) / 180;
 /** The galaxy "lights up" from the nucleus outwards in this time. */
 export const SPIRAL_IGNITE_MS = 1200;
 /** The galaxy follows the page at this fraction of its speed (the rest is the parallax). */
@@ -82,14 +82,14 @@ export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralDa
   const onArm = () => {
     const r = ARM_START + (1 - ARM_START) * Math.pow(rng(), 1.35);
     const arm = rng() < 0.5 ? 0 : Math.PI;
-    const theta = arm + WIND * Math.log(r / ARM_START) + gauss() * mix(0.34, 0.13, r);
+    const theta = arm + WIND * Math.log(r / ARM_START) + gauss() * mix(0.24, 0.085, r);
     const rr = r * (1 + gauss() * 0.035);
     return { x: Math.cos(theta) * rr, y: Math.sin(theta) * rr, r };
   };
 
   const nucleus = Math.round(points * 0.12);
   const dust = Math.round(points * 0.2);
-  const glow = Math.round(points * 0.035);
+  const glow = Math.round(points * 0.065);
   const arms = points - nucleus - dust - glow;
 
   for (let i = 0; i < nucleus; i += 1) {
@@ -99,18 +99,18 @@ export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralDa
   }
   for (let i = 0; i < arms; i += 1) {
     const p = onArm();
-    put(p.x, p.y, gauss() * 0.012, 1 + 3 * Math.pow(rng(), 3.2), mix(0.9, 0.42, p.r) * (0.6 + 0.4 * rng()), KIND_DISC, tone());
+    put(p.x, p.y, gauss() * 0.012, 1.4 + 3.4 * Math.pow(rng(), 2.4), mix(1, 0.72, p.r) * (0.7 + 0.3 * rng()), KIND_DISC, tone());
   }
   // Fine dust between the arms: small and faint, all around.
   for (let i = 0; i < dust; i += 1) {
     const r = 0.08 + 0.95 * Math.pow(rng(), 0.9);
     const theta = rng() * 6.2832;
-    put(Math.cos(theta) * r, Math.sin(theta) * r, gauss() * 0.016, 1 + 0.7 * rng(), 0.1 + 0.16 * rng(), KIND_DISC, tone());
+    put(Math.cos(theta) * r, Math.sin(theta) * r, gauss() * 0.016, 1 + 0.6 * rng(), 0.06 + 0.12 * rng(), KIND_DISC, tone());
   }
   // A few larger stars with a glow, along the arms.
   for (let i = 0; i < glow; i += 1) {
     const p = onArm();
-    put(p.x, p.y, gauss() * 0.012, 4.5 + 2.5 * rng(), 0.75 + 0.25 * rng(), KIND_DISC, tone());
+    put(p.x, p.y, gauss() * 0.012, 5 + 4.5 * rng(), 0.85 + 0.15 * rng(), KIND_DISC, tone());
   }
   // Loose stars over the whole sky.
   for (let i = 0; i < stars; i += 1) {
@@ -119,15 +119,17 @@ export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralDa
     put(rng(), rng(), 0.3 + 0.7 * rng(), big ? 2.4 + rng() : 1 + 1.3 * rng() * rng(), big ? 0.85 : 0.22 + 0.5 * rng(), KIND_SKY, u < 0.08 ? PEACH : u < 0.4 ? ICE : WHITE);
   }
   // Nucleus: three stacked soft glows, warm white.
-  put(0, 0, 0, 0.36, 0.14, KIND_CORE, WARM_WHITE);
-  put(0, 0, 0, 0.17, 0.26, KIND_CORE, WARM_WHITE);
-  put(0, 0, 0, 0.07, 0.55, KIND_CORE, WHITE);
+  put(0, 0, 0, 0.42, 0.16, KIND_CORE, WARM_WHITE);
+  put(0, 0, 0, 0.2, 0.32, KIND_CORE, WARM_WHITE);
+  put(0, 0, 0, 0.08, 0.75, KIND_CORE, WHITE);
 
   return { count, pos, meta, color };
 }
 
-/** Radius of the disc on screen: about 70% of the window height once tilted, never wider than the page. */
-export const spiralRadius = (width: number, height: number) => Math.min(height * 0.62, width * 0.6, 640);
+/** Radius of the disc on screen: it fills the gap between the two words of the title (a little
+ *  wider than the gap, like the reference) and about 90% of the window height. */
+export const spiralRadius = (width: number, height: number, gap?: number) =>
+  gap && gap > 120 ? Math.min(height * 0.46, gap * 0.66, 620) : Math.min(height * 0.46, width * 0.42, 560);
 
 /** A point of the disc on the screen, in units of the galaxy radius around its centre. */
 export function projectSpiral(x: number, y: number, z: number, angle: number): [number, number] {
@@ -146,6 +148,8 @@ export interface SpiralAnchor {
   y: number;
   /** Bottom of the Orbitarium section: the galaxy leaves with it. */
   bottom: number;
+  /** Free width between the two words of the title (0 when they are stacked). */
+  gap: number;
 }
 
 /** Reads the layout (call it on resize, never per frame). */
@@ -155,5 +159,12 @@ export function measureSpiralAnchor(): SpiralAnchor | null {
   if (!core || !section) return null;
   const c = core.getBoundingClientRect();
   const s = section.getBoundingClientRect();
-  return { x: c.left + c.width / 2 + window.scrollX, y: c.top + c.height / 2 + window.scrollY, bottom: s.bottom + window.scrollY };
+  const words = section.querySelectorAll(".split-title__word");
+  let gap = 0;
+  if (words.length === 2) {
+    const a = words[0].getBoundingClientRect();
+    const b = words[1].getBoundingClientRect();
+    if (Math.abs(a.top - b.top) < a.height / 2) gap = Math.max(0, b.left - a.right);
+  }
+  return { x: c.left + c.width / 2 + window.scrollX, y: c.top + c.height / 2 + window.scrollY, bottom: s.bottom + window.scrollY, gap };
 }

@@ -247,7 +247,7 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
         const bottom = anchor ? anchor.bottom - sy : 0;
         gl.uniform2f(u.uRes, width, height);
         gl.uniform2f(u.uCenter, anchor ? anchor.x - window.scrollX : width / 2, rest + (titleY - rest) * SPIRAL_FOLLOW);
-        gl.uniform1f(u.uRadius, spiralRadius(width, height));
+        gl.uniform1f(u.uRadius, spiralRadius(width, height, anchor?.gap));
         gl.uniform1f(u.uAngle, (time / SPIRAL_TURN_SECONDS) * Math.PI * 2);
         gl.uniform2f(u.uTilt, Math.cos(SPIRAL_TILT), Math.sin(SPIRAL_TILT));
         gl.uniform2f(u.uRoll, Math.cos(SPIRAL_ROLL), Math.sin(SPIRAL_ROLL));

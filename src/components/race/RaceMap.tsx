@@ -35,20 +35,9 @@ const GROUND_FADE = 200;
 const SEAM_OVERLAP = 8;
 /** The road fades out over its last px instead of ending in a square cut. */
 const ROAD_END_FADE = 90;
-/**
- * The break-up, a timed event (spec-v3 §2): the last stretch cracks (250 ms), its pieces let go
- * and drift away (1.1 s, cubic-bezier(.16, 1, .3, 1)) and turn into stars in the last 300 ms.
- */
-const BREAK_MS = 1600;
-const CRACK_MS = 250;
-const RELEASE_MS = 1100;
-const STAR_MS = 300;
-/** Going back (a car is on the road again): the same animation backwards, quicker. */
-const MEND_MS = 600;
-/** The pieces let go in a short wave, from the top of the stretch to its end. */
-const BREAK_WAVE_MS = 180;
-/** Share of its drift a piece has already moved when the crack is complete (the gaps open). */
-const CRACK_SHIFT = 0.012;
+/** The end of the road is broken for good (spec change 2026-11-18, owner): over its last px the
+ *  road turns into loose pieces that hang in the air, and the cars jump off that edge into space. */
+const EDGE_LEN = 240;
 const TINT_GOLD = [255, 196, 120] as const;
 const TINT_DUSK = [60, 70, 120] as const;
 const TINT_NIGHT = [16, 30, 53] as const;
@@ -99,28 +88,6 @@ const bez = (p0: number, p1: number, p2: number, p3: number, t: number) => {
   const u = 1 - t;
   return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
 };
-/** CSS cubic-bezier(x1, y1, x2, y2) as a function of time (Newton on x, then y). */
-function cubicBezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
-  const cx = 3 * x1;
-  const bx = 3 * (x2 - x1) - cx;
-  const ax = 1 - cx - bx;
-  const cy = 3 * y1;
-  const by = 3 * (y2 - y1) - cy;
-  const ay = 1 - cy - by;
-  return x => {
-    if (x <= 0) return 0;
-    if (x >= 1) return 1;
-    let t = x;
-    for (let i = 0; i < 8; i += 1) {
-      const error = ((ax * t + bx) * t + cx) * t - x;
-      const slope = (3 * ax * t + 2 * bx) * t + cx;
-      if (Math.abs(error) < 1e-5 || Math.abs(slope) < 1e-6) break;
-      t = clamp(t - error / slope);
-    }
-    return ((ay * t + by) * t + cy) * t;
-  };
-}
-const easeDrift = cubicBezier(0.16, 1, 0.3, 1);
 const rgba = (rgb: readonly number[], alpha: number) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha.toFixed(3)})`;
 
 /** Dusk tint at a fraction of the map height (from the 50% stop down). */
@@ -430,81 +397,36 @@ export default function RaceMap() {
 
     const carsSpan = (count - 1) * CAR_SPACING;
 
-    /* ---------- the break-up: one timed animation, with its own clock ---------- */
+    /* ---------- the broken end of the road (static) ---------- */
     const tailSpan = Math.max(1, track.length - breakLen);
-    // Per piece: when it lets go (a short wave down the stretch) and, for the pieces of road,
-    // how faded the road already is there (its end fades out).
-    const chunkDelay = chunks.map(chunk => clamp((chunk.at - breakLen) / tailSpan) * BREAK_WAVE_MS);
-    const chunkAlpha = chunks.map(chunk =>
-      chunk.kind === 'leaf' || chunk.kind === 'roof' ? 1 : clamp((track.endY - chunk.y) / ROAD_END_FADE)
+    // The broken end: pieces of the last EDGE_LEN px of road, the further along the more loose.
+    const edgeStart = track.length - Math.min(EDGE_LEN, tailSpan);
+    const edgeK = chunks.map(chunk =>
+      chunk.kind === 'leaf' || chunk.kind === 'roof' ? -1 : clamp((chunk.at - edgeStart) / Math.max(1, track.length - edgeStart))
     );
-    /** 0 = road whole, 1 = broken up. */
-    let breakP = 0;
-    let broken = false;
-    let shownP = -1;
-    let breakRaf = 0;
-    let breakLast = 0;
-
-    const applyBreak = (p: number) => {
-      if (p === shownP) return;
-      shownP = p;
-      const ms = p * BREAK_MS;
-      const crack = clamp(ms / CRACK_MS);
-      const toStar = clamp((ms - (BREAK_MS - STAR_MS)) / STAR_MS);
-      // The pieces come in over the first part of the crack and the road goes out over the rest,
-      // so the ground never shows through in between.
-      const piecesIn = clamp(crack / 0.4);
-      const roadOut = (1 - clamp((crack - 0.4) / 0.6)).toFixed(3);
-      const ground = (1 - smooth((ms - CRACK_MS) / RELEASE_MS)).toFixed(3);
-      tailLayers.forEach(node => {
-        node.style.opacity = ground;
-      });
-      if (tailShadow) tailShadow.style.opacity = roadOut;
-      if (tailRoad) tailRoad.style.opacity = roadOut;
+    const applyEdge = () => {
+      if (tailRoad) tailRoad.style.opacity = '1';
+      if (tailShadow) tailShadow.style.opacity = '1';
       if (!fx) return;
-      fx.style.display = p > 0 ? 'block' : 'none';
-      if (p <= 0) return;
+      fx.style.display = 'block';
       chunkNodes.forEach((node, index) => {
         const chunk = chunks[index];
         if (!chunk || !node.body || !node.star) return;
-        const delay = chunkDelay[index];
-        const e = easeDrift(clamp((ms - CRACK_MS - delay) / (RELEASE_MS - delay)));
-        const k = CRACK_SHIFT * crack + (1 - CRACK_SHIFT) * e;
-        const x = chunk.x + chunk.dx * k;
-        const y = chunk.y + chunk.dy * k;
-        node.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(chunk.turn + chunk.rot * k).toFixed(1)})`);
-        node.body.setAttribute('transform', `scale(${mix(1, 0.2, e).toFixed(3)})`);
-        node.body.style.opacity = (chunkAlpha[index] * piecesIn * (1 - toStar)).toFixed(3);
-        node.star.style.opacity = (toStar * chunk.glow).toFixed(3);
+        const k = edgeK[index];
+        if (k <= 0) {
+          node.body.style.opacity = '0';
+          node.star.style.opacity = '0';
+          return;
+        }
+        // Still attached at the start of the edge, more and more adrift towards the end.
+        const drift = 0.04 + 0.42 * Math.pow(k, 1.7);
+        const x = chunk.x + chunk.dx * drift * 0.45;
+        const y = chunk.y + chunk.dy * drift * 0.5;
+        node.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(chunk.turn + chunk.rot * drift * 0.5).toFixed(1)})`);
+        node.body.setAttribute('transform', `scale(${mix(1, 0.72, k).toFixed(3)})`);
+        node.body.style.opacity = mix(1, 0.8, k).toFixed(3);
+        node.star.style.opacity = '0';
       });
-    };
-
-    // rAF only runs while the tab is visible, and a long gap counts as one frame: the animation
-    // pauses with the tab and carries on where it was.
-    const breakTick = (now: number) => {
-      breakRaf = 0;
-      const dt = breakLast ? Math.min(50, now - breakLast) : 16;
-      breakLast = now;
-      breakP = broken ? Math.min(1, breakP + dt / BREAK_MS) : Math.max(0, breakP - dt / MEND_MS);
-      applyBreak(breakP);
-      if (breakP !== (broken ? 1 : 0)) breakRaf = requestAnimationFrame(breakTick);
-    };
-    /** `instant`: no animation (first paint, or the layout changed): just the state for that scroll position. */
-    const setBroken = (next: boolean, instant: boolean) => {
-      if (next === broken && !instant) return;
-      broken = next;
-      setRoadBroken(next);
-      if (instant) {
-        cancelAnimationFrame(breakRaf);
-        breakRaf = 0;
-        breakP = next ? 1 : 0;
-        applyBreak(breakP);
-        return;
-      }
-      if (!breakRaf) {
-        breakLast = 0;
-        breakRaf = requestAnimationFrame(breakTick);
-      }
     };
 
     let raf = 0;
@@ -534,8 +456,10 @@ export default function RaceMap() {
         flags?.classList.toggle('is-waving', lead >= track.finishLen);
       }
 
-      // The road is whole while any car is on it; it breaks when the last one leaves its end.
-      setBroken(lead - carsSpan > track.length, first);
+      // The end of the road is broken from the start (applyEdge); when the last car has jumped
+      // off it, the galaxy lights up.
+      if (first) applyEdge();
+      setRoadBroken(lead - carsSpan > track.length);
 
       if (lead > track.length && (!planets.length || !planets[0].wrap.isConnected)) findPlanets();
 
@@ -585,7 +509,7 @@ export default function RaceMap() {
           if (avoid) dim = 1 - 0.75 * smooth((y - avoid.top + 70) / 60) * (1 - smooth((y - avoid.bottom) / 60));
         }
         const turn = t * t * (220 + (i % 4) * 60) * side;
-        car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${turn.toFixed(1)}deg) scale(${(scale * mix(1, 0.55, t)).toFixed(3)})`;
+        car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${turn.toFixed(1)}deg) scale(${(scale * mix(1, 0.55, t) * (1 + 0.38 * Math.sin(Math.PI * Math.min(1, t / 0.32)))).toFixed(3)})`;
         car.el.style.opacity = (dim * (1 - clamp((t - 0.75) / 0.2))).toFixed(3);
         if (car.tint) car.tint.style.opacity = clamp(t * 1.4).toFixed(3);
       }
@@ -600,7 +524,6 @@ export default function RaceMap() {
     window.addEventListener('resize', onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(raf);
-      cancelAnimationFrame(breakRaf);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
       if (sky) sky.style.opacity = '';
