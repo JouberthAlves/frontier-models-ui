@@ -21,16 +21,17 @@ export default function Orbitarium() {
   const mapReveal = useReveal<HTMLDivElement>();
   // No real GPU, reduced motion, or the WebGL galaxy stopped: the still picture of the spiral.
   const still = reduced || galaxyOff || !hasGpu();
-  // Split title (spec-v3 §3.2): the words of the name go to the two edges, the galaxy between.
+  // Second hero (spec-v4 §3): one full screen with the words of the name at the two edges and
+  // the galaxy between them, and nothing else. The lede, the map and the list come below it.
   const words = t.orbitarium.title.split('-').filter(Boolean);
   const lastWord = words.length > 1 ? words[words.length - 1] : '';
   const firstWords = lastWord ? words.slice(0, -1).join('-') : t.orbitarium.title;
 
   return (
     <section id="orbitarium" className="section orbitarium space" aria-labelledby="orbitarium-title">
-      {still && <SpiralStill />}
-      <div className="shell orbitarium__shell">
-        <header className="section__head">
+      <div className="orbit-hero" data-galaxy-hero>
+        {still && <SpiralStill />}
+        <div className="orbit-hero__shell">
           <h2 id="orbitarium-title" className="split-title">
             <span className="sr-only">{t.orbitarium.title}</span>
             <span className="split-title__art" aria-hidden="true">
@@ -46,8 +47,11 @@ export default function Orbitarium() {
               )}
             </span>
           </h2>
-          <p className="lede">{t.orbitarium.intro}</p>
-        </header>
+        </div>
+      </div>
+
+      <div className="shell orbitarium__shell">
+        <p className="lede orbitarium__lede">{t.orbitarium.intro}</p>
 
         <div className="orbitarium__layout">
           <div ref={mapReveal} className="orbitarium__map">

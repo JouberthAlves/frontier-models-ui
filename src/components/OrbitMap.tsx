@@ -42,9 +42,8 @@ function orbits(count: number) {
  * v3 look: thin white orbits, the sun as a soft white glow, planets as small shaded spheres in
  * the model color, small grey labels.
  *
- * v2: RaceMap hides each planet (`data-orbit-planet`) until its car arrives from the track and
- * reads the live position of `data-orbit-body` for the zero-g flight. Without that engine
- * (reduced motion) the planets are simply visible.
+ * v4: the planets no longer wait for a car. The map fades in on its own when it enters the
+ * screen (the `.reveal-item` around it); with reduced motion it is simply visible.
  */
 export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps) {
   const { t } = useI18n();
@@ -144,7 +143,6 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
                   <g transform={`translate(${px} ${C}) scale(1 ${1 / SQUASH}) rotate(${-TILT}) translate(${-px} ${-C})`}>
                     <g
                       className={`orbit-map__planet${selected ? ' is-selected' : ''}`}
-                      data-orbit-planet={index}
                       role="button"
                       tabIndex={0}
                       aria-label={t.orbitarium.select(run.model)}
@@ -155,8 +153,7 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
                       <circle cx={px} cy={C} r={hit} className="orbit-map__hit" />
                       <circle cx={px} cy={C} r={16 + 4 * Math.min(scale, 2)} className="orbit-map__focus" />
                       {selected && <circle cx={px} cy={C} r={PLANET_R + 6} className="orbit-map__ring" />}
-                      <circle cx={px} cy={C} r={PLANET_R} stroke={colorOf(run)} className="orbit-map__arrive" />
-                      <circle cx={px} cy={C} r={PLANET_R} fill={colorOf(run)} className="orbit-map__body" data-orbit-body />
+                      <circle cx={px} cy={C} r={PLANET_R} fill={colorOf(run)} className="orbit-map__body" />
                       <circle cx={px} cy={C} r={PLANET_R} fill="url(#orbit-shade)" className="orbit-map__shade" />
                       <text
                         x={px}

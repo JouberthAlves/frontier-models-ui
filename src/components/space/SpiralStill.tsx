@@ -11,8 +11,8 @@ const REACH = 0.75;
 /**
  * The same spiral as the WebGL layer, drawn once on a 2D canvas (spec-v3 §3.3): shown without a
  * real GPU, with reduced motion, or after the WebGL layer stopped. No animation. It sits inside
- * the Orbitarium section, behind its content, with the nucleus between the two words of the
- * title, and is drawn again only when the layout changes.
+ * the second hero (the full-screen Orbitarium title), behind the words, with the nucleus between
+ * them, never past the hero's edges, and is drawn again only when the layout changes.
  */
 export default function SpiralStill() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,7 +35,7 @@ export default function SpiralStill() {
       const cx = anchor.x - window.scrollX - box.left;
       const coreY = anchor.y - window.scrollY - box.top;
       const radius = spiralRadius(width, STILL_VIEW_H, anchor.gap);
-      // Never above the section: the end of the race map is there.
+      // Never above the hero (the end of the race map is there) nor below it (the content is).
       const top = Math.max(0, Math.round(coreY - radius * REACH));
       const height = Math.max(1, Math.round(Math.min(box.height - top, coreY + radius * REACH - top)));
       const key = `${width}|${Math.round(cx)}|${Math.round(coreY)}|${height}`;

@@ -1,3 +1,4 @@
+/* Same skin as the compare bar: it follows the zone (spec-v4 §4, --zone-* in tokens.css). */
 .motion-notice {
   position: fixed;
   z-index: 44;
@@ -8,13 +9,24 @@
   align-items: center;
   gap: 12px;
   padding: 4px 4px 4px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  color: var(--ink-2);
+  border: 1px solid var(--zone-line);
+  border-radius: var(--zone-notice-radius);
+  background-color: var(--zone-bg);
+  box-shadow: var(--zone-shadow);
+  color: var(--zone-ink-2);
+  font-family: var(--zone-font);
   font-size: 14px;
   line-height: 1.4;
+  backdrop-filter: blur(var(--zone-blur));
+  -webkit-backdrop-filter: blur(var(--zone-blur));
   transform: translateX(-50%);
+  transition:
+    background-color var(--zone-t) ease, border-color var(--zone-t) ease, color var(--zone-t) ease,
+    box-shadow var(--zone-t) ease, border-radius var(--zone-t) ease;
+}
+
+.motion-notice :focus-visible {
+  outline-color: var(--zone-ink);
 }
 
 .motion-notice p {
@@ -29,12 +41,13 @@
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: var(--ink-2);
+  color: var(--zone-ink-2);
   font-size: 20px;
+  transition: color var(--zone-t) ease;
 }
 
 .motion-notice__close:hover {
-  color: var(--ink);
+  color: var(--zone-ink);
 }
 
 @media (max-width: 599px) {

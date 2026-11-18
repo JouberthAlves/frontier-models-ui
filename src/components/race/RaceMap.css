@@ -218,16 +218,50 @@
   }
 }
 
-/* ---------- pieces that break off ---------- */
-.fx-star {
-  fill: #fff;
-  opacity: 0;
+/* ---------- the broken end of the road (spec-v4 §1) ---------- */
+/* Each slab is a clipped piece of the real road; under it, the side of the plate (its
+   thickness) and its shadow. */
+.fx-slab__side {
+  fill: #3b404c;
+  stroke: #3b404c;
+  stroke-width: 1;
+  stroke-linejoin: round;
 }
-.fx-star--cool {
-  fill: #cfe8ff;
+.fx-slab__shadow {
+  fill: #070b14;
+  stroke: #070b14;
+  stroke-width: 6;
+  stroke-linejoin: round;
+}
+.fx-grit {
+  fill: #4b515f;
+}
+.fx-chip {
+  fill: var(--map-kerb-white);
+}
+.fx-chip--red {
+  fill: var(--map-kerb-red);
 }
 
-/* ---------- cars (neutral mocks: no model color on the track) ---------- */
+/* The loose slabs sway very slowly (±1.5 px, 6 s): only with a real GPU (.is-floating), only
+   while on screen (.is-live), never with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .race-fx.is-floating.is-live .fx-slab--loose {
+    animation: fx-sway 6s ease-in-out infinite;
+  }
+}
+
+@keyframes fx-sway {
+  0%,
+  100% {
+    transform: translateY(-1.5px);
+  }
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+
+/* ---------- cars (neutral, decorative mocks: no model color, ever) ---------- */
 .race-car {
   position: absolute;
   left: -14px;
@@ -256,10 +290,6 @@
 .race-car__paint {
   fill: #fff3e3;
 }
-.race-car__tint {
-  fill: var(--model);
-  opacity: 0;
-}
 .race-car__stripe {
   fill: #fdaf6d;
 }
@@ -268,4 +298,17 @@
 }
 .race-car__lights {
   fill: #fff6d8;
+}
+
+/* A white flash in the nucleus of the galaxy as a car goes out (placed by RaceMap). */
+.race-flash {
+  position: absolute;
+  left: -36px;
+  top: -36px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0.7) 14%, rgba(207, 227, 255, 0.22) 40%, rgba(207, 227, 255, 0) 70%);
+  opacity: 0;
+  will-change: transform, opacity;
 }

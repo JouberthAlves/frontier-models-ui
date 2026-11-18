@@ -22,6 +22,22 @@ export const SPIRAL_ROLL = (-10 * Math.PI) / 180;
 export const SPIRAL_IGNITE_MS = 1200;
 /** The galaxy follows the page at this fraction of its speed (the rest is the parallax). */
 export const SPIRAL_FOLLOW = 0.6;
+/** Where the nucleus rests on the screen (fraction of the window height): the middle, which is
+ *  where the second hero puts it when that hero fills the window. */
+export const SPIRAL_REST = 0.5;
+/** The galaxy belongs to the second hero: it fades out over this many px above the hero's bottom
+ *  edge, so it never shows behind the content of the section below. */
+export const SPIRAL_CLIP_FADE = 160;
+
+/**
+ * Document y of the nucleus when the page is scrolled to `scrollY`. With the WebGL layer (`live`)
+ * the galaxy follows the page slower than it scrolls; the still picture sits on the marker.
+ * RaceMap uses the same number to pull the cars into the nucleus.
+ */
+export const spiralCoreY = (anchorY: number, scrollY: number, viewH: number, live: boolean) => {
+  const rest = scrollY + viewH * SPIRAL_REST;
+  return live ? rest + (anchorY - rest) * SPIRAL_FOLLOW : anchorY;
+};
 
 const SEED = 20261118;
 /** How tightly the arms wind: angle gained per unit of ln(radius). */
@@ -127,9 +143,10 @@ export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralDa
 }
 
 /** Radius of the disc on screen: it fills the gap between the two words of the title (a little
- *  wider than the gap, like the reference) and about 90% of the window height. */
+ *  wider than the gap, like the reference) and about 90% of the window height. With the words
+ *  stacked (phones, tablets) it sits behind them and is wider than the screen. */
 export const spiralRadius = (width: number, height: number, gap?: number) =>
-  gap && gap > 120 ? Math.min(height * 0.46, gap * 0.66, 620) : Math.min(height * 0.46, width * 0.42, 560);
+  gap && gap > 120 ? Math.min(height * 0.46, gap * 0.66, 620) : Math.min(height * 0.46, width * 0.62, 560);
 
 /** A point of the disc on the screen, in units of the galaxy radius around its centre. */
 export function projectSpiral(x: number, y: number, z: number, angle: number): [number, number] {
@@ -146,7 +163,7 @@ export interface SpiralAnchor {
   /** Where the nucleus sits, in document coordinates: between the two words of the title. */
   x: number;
   y: number;
-  /** Bottom of the Orbitarium section: the galaxy leaves with it. */
+  /** Bottom of the second hero (the full-screen title): the galaxy leaves with it. */
   bottom: number;
   /** Free width between the two words of the title (0 when they are stacked). */
   gap: number;
@@ -155,7 +172,7 @@ export interface SpiralAnchor {
 /** Reads the layout (call it on resize, never per frame). */
 export function measureSpiralAnchor(): SpiralAnchor | null {
   const core = document.querySelector('[data-galaxy-core]');
-  const section = document.getElementById('orbitarium');
+  const section = document.querySelector('[data-galaxy-hero]');
   if (!core || !section) return null;
   const c = core.getBoundingClientRect();
   const s = section.getBoundingClientRect();

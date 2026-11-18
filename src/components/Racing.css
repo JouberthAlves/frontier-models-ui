@@ -32,9 +32,10 @@
   }
 }
 
-/* Finish line (measured by RaceMap), then the end of the road and the zero-g stretch. */
+/* Finish line (measured by RaceMap), then the broken end of the road and a stretch of empty
+   sky before the second hero (the slabs of road fall into it). */
 .racing__finish {
-  height: calc(260px + 62vh);
+  height: calc(260px + 24vh);
   margin-top: calc(var(--finish-gap) - var(--race-gap));
 }
 

@@ -1,4 +1,12 @@
+/* The bar wears the skin of the zone the middle of the window is in (spec-v4 §4): cream and
+   navy over the race, black glass and white pills over the space. The --zone-* tokens
+   (tokens.css) change with data-zone on <html>; colors, shadow and radius cross-fade in 300 ms.
+   This is a zone change, not a per-frame animation (documented exception to transform/opacity);
+   with reduced motion the global rule makes it instant. */
 .compare-bar {
+  --zone-fade:
+    background-color var(--zone-t) ease, border-color var(--zone-t) ease, box-shadow var(--zone-t) ease,
+    border-radius var(--zone-t) ease;
   position: fixed;
   z-index: 45;
   left: 50%;
@@ -9,18 +17,30 @@
   align-items: center;
   gap: 12px 16px;
   padding: 12px 12px 12px 20px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(14, 32, 52, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--zone-line);
+  border-radius: var(--zone-radius);
+  background-color: var(--zone-bg);
+  box-shadow: var(--zone-shadow);
+  color: var(--zone-ink);
+  font-family: var(--zone-font);
+  backdrop-filter: blur(var(--zone-blur));
+  -webkit-backdrop-filter: blur(var(--zone-blur));
   transform: translateX(-50%);
+  /* Color is faded only where it is set (an inherited color that fades again would lag). */
+  transition:
+    var(--zone-fade),
+    color var(--zone-t) ease;
+}
+
+.compare-bar :focus-visible {
+  outline-color: var(--zone-ink);
 }
 
 .compare-bar__label {
   flex: none;
-  color: var(--ink-2);
+  color: var(--zone-ink-2);
   font-weight: 600;
+  transition: color var(--zone-t) ease;
 }
 
 .compare-bar__chips {
@@ -39,12 +59,13 @@
   min-height: 44px;
   max-width: 100%;
   padding: 0 4px 0 14px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--zone-chip-line);
   border-radius: var(--r-chip);
-  background: rgba(8, 15, 29, 0.5);
+  background-color: var(--zone-chip-bg);
   font-weight: 600;
   font-size: 15px;
   animation: chip-in 180ms var(--ease-out) both;
+  transition: var(--zone-fade);
 }
 
 .compare-chip:not(:has(.compare-chip__remove)) {
@@ -73,10 +94,11 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--ink-2);
+  color: var(--zone-ink-2);
   font-size: 20px;
   line-height: 1;
   position: relative;
+  transition: color var(--zone-t) ease;
 }
 
 /* 44px hit area around the 36px visual */
@@ -87,28 +109,46 @@
 }
 
 .compare-chip__remove:hover {
-  color: var(--ink);
+  color: var(--zone-ink);
 }
 
 .compare-bar__add {
   min-height: 44px;
   padding: 0 16px;
-  border: 1px dashed var(--line-cool);
+  border: 1px var(--zone-add-style) var(--zone-add-line);
   border-radius: var(--r-chip);
-  background: transparent;
-  color: var(--ink);
+  background-color: var(--zone-add-bg);
+  color: var(--zone-ink);
   font-weight: 600;
   font-size: 15px;
-  transition: transform var(--t-micro) var(--ease-out);
+  transition:
+    transform var(--t-micro) var(--ease-out),
+    var(--zone-fade),
+    color var(--zone-t) ease;
 }
 
 .compare-bar__add:active {
   transform: scale(0.98);
 }
 
-.compare-bar__go {
+/* Main action: solid navy with cream text over the race, a solid white pill over the space. */
+.compare-bar .compare-bar__go {
   flex: none;
   min-height: 48px;
+  background-color: var(--zone-go-bg);
+  color: var(--zone-go-ink);
+  transition:
+    transform var(--t-micro) var(--ease-out),
+    var(--zone-fade),
+    color var(--zone-t) ease;
+}
+
+.compare-bar .compare-bar__go::before {
+  background: var(--zone-go-hover);
+}
+
+.compare-bar .compare-bar__go:hover::before {
+  opacity: 0.12;
 }
 
 .compare-bar__go-short {
@@ -139,10 +179,14 @@
   bottom: calc(100% + 10px);
   width: min(340px, calc(100% - 24px));
   padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  background: var(--card);
-  box-shadow: 0 18px 40px rgba(4, 8, 16, 0.5);
+  border: 1px solid var(--zone-line);
+  border-radius: var(--zone-pop-radius);
+  background-color: var(--zone-pop-bg);
+  box-shadow: var(--zone-pop-shadow);
+  color: var(--zone-ink);
+  transition:
+    var(--zone-fade),
+    color var(--zone-t) ease;
 }
 
 .compare-pop[hidden] {
@@ -151,7 +195,7 @@
 
 .compare-pop__title {
   padding: 4px 8px 8px;
-  color: var(--ink-2);
+  color: var(--zone-ink-2);
   font-size: 14px;
 }
 
@@ -170,11 +214,11 @@
 }
 
 .compare-pop__item:hover:not(:disabled) {
-  background: rgba(241, 246, 253, 0.06);
+  background: var(--zone-hover);
 }
 
 .compare-pop__item:disabled {
-  color: var(--ink-3);
+  color: var(--zone-ink-2);
 }
 
 .compare-pop__check {
@@ -282,7 +326,10 @@
 @media (prefers-reduced-motion: no-preference) {
   .compare-bar {
     transform: translate(-50%, calc(100% + 24px));
-    transition: transform 500ms var(--ease-out) 2400ms;
+    transition:
+      transform 500ms var(--ease-out) 2400ms,
+      var(--zone-fade),
+      color var(--zone-t) ease;
   }
 
   [data-ignited] .compare-bar {

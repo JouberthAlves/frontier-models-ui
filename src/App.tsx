@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Background from './components/Background';
 import Nav from './components/Nav';
 import Hero from './components/Hero';
@@ -11,9 +12,12 @@ import MotionNotice from './components/MotionNotice';
 import Loader from './components/Loader';
 import RaceMap from './components/race/RaceMap';
 import { useI18n } from './i18n/i18n';
+import { watchZone } from './lib/zone';
 
 export default function App() {
   const { t } = useI18n();
+  // Race above the finish line, space below it: the floating UI changes skin with the zone.
+  useEffect(() => watchZone(), []);
   return (
     <>
       <a className="skip-link" href="#main">
@@ -21,7 +25,7 @@ export default function App() {
       </a>
       <Background />
       <Nav />
-      {/* The map, the cars and the break-up layer sit behind <main>, in page coordinates. */}
+      {/* The map, the broken end of the road and the cars sit behind <main>, in page coordinates. */}
       <div className="page">
         <RaceMap />
         <main id="main" tabIndex={-1}>

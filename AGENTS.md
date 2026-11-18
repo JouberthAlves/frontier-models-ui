@@ -4,14 +4,14 @@ Instruções para qualquer agente (Claude Code, Codex, Cursor…) que mexa neste
 
 ## O que é
 
-Interface para comparar as execuções do arquivo de benchmarks **Frontier Models** (fork `JouberthAlves/Frontiers-Models`, original `bielxdh3/Frontiers-Models`). Dois benchmarks: **Racing-bench** (jogo de corrida 3D, 12 prints de cena por execução) e **Orbitarium-bench** (Sistema Solar interativo). Direção visual (v2): "Corrida até o céu": do hero ao fim do Racing a página é um mapa cartoon pastel visto de cima (construções em 3/4, como no mockup aprovado), com a pista em S contornando os blocos; depois da linha de chegada a pista se desfaz em estrelas e cada carro vira um planeta do Orbitarium. Do Orbitarium para baixo é o **espaço** (v3): fundo quase preto, galáxia espiral de partículas, sans limpa, linhas finas e pílulas. Specs: `_spec/spec-v3.md` vale sobre `_spec/spec-v2.md`, que vale sobre `_spec/spec.md` (v1). Visual alvo da corrida em `design/mockup-pista-cartoon.png` (mecânica em `design/prototipo-pista.html`); visual alvo do espaço em `design/espaco/d-estilo-astra.png`.
+Interface para comparar as execuções do arquivo de benchmarks **Frontier Models** (fork `JouberthAlves/Frontiers-Models`, original `bielxdh3/Frontiers-Models`). Dois benchmarks: **Racing-bench** (jogo de corrida 3D, 12 prints de cena por execução) e **Orbitarium-bench** (Sistema Solar interativo). Direção visual (v2): "Corrida até o céu": do hero ao fim do Racing a página é um mapa cartoon pastel visto de cima (construções em 3/4, como no mockup aprovado), com a pista em S contornando os blocos; depois da linha de chegada a pista termina partida (v4), os carros saltam da ponta e caem em espiral no núcleo da galáxia. Do Orbitarium para baixo é o **espaço** (v3): fundo quase preto, galáxia espiral de partículas, sans limpa, linhas finas e pílulas; ele abre com um **2º hero** de tela inteira ("Orbitarium … bench" com a galáxia entre as palavras, v4). Specs: `_spec/spec-v4.md` vale sobre `_spec/spec-v3.md`, que vale sobre `_spec/spec-v2.md`, que vale sobre `_spec/spec.md` (v1). Visual alvo da corrida em `design/mockup-pista-cartoon.png` (mecânica em `design/prototipo-pista.html`); visual alvo do espaço em `design/espaco/d-estilo-astra.png`.
 
 ## Regras que não se quebram
 
 1. **Nada de ranking.** Nenhuma nota, posição, pódio, vencedor ou "melhor" na copy, no código ou nos dados (lista de palavras proibidas em `_spec/spec.md` §1). Ordem de exibição = `current_arena` do `RUNS.json`. Não mostrar FPS, contagem de testes nem `reported_verification`.
 2. **Nunca escrever no repo de benchmarks.** Ele só é lido por `git show` no `npm run sync`.
 3. **Link de código** sempre para a cópia arquivada no Frontiers Models, nunca para o repositório de origem do modelo.
-4. **Movimento:** só `transform`/`opacity` (exceções no spec), `prefers-reduced-motion` mostra o estado final parado, WebGL só com GPU real.
+4. **Movimento:** só `transform`/`opacity` (exceções no spec; a troca de pele da barra de comparação é uma delas), `prefers-reduced-motion` mostra o estado final parado, WebGL só com GPU real.
 5. Sem rolagem lateral em nenhuma largura (375 → 1920).
 6. Componentes adaptados do React Bits/Vue Bits mantêm o aviso de licença no topo do arquivo (MIT + Commons Clause) e o crédito no rodapé.
 7. O espaço usa só a **linguagem visual** da referência (página de lançamento de modelo): nenhum logo, nome, texto, fonte proprietária ou marca de terceiros no site.
@@ -40,17 +40,17 @@ Quando o repo de benchmarks ganhar uma execução nova (ex.: um modelo novo no R
 5. **Copy:** se a execução usou outra versão de prompt, ajuste o texto de abertura do Racing/Orbitarium em `src/i18n/pt.ts` e `en.ts` (os dois idiomas).
 6. `npm run build`, `npm run lint`, prints em 375 e 1440 da seção mexida, commit em inglês com prefixo (`added:`, `updated:`, `fixed:`, `deleted:`).
 
-Não é preciso mexer no código dos carros, do mapa orbital nem do loading: **a quantidade de carros, de órbitas e o destino de cada carro vêm dos dados** (ver abaixo). O título "Os N jogos" também conta sozinho. O loading pré-carrega as cenas do primeiro modelo da arena do Racing, sem lista escrita à mão.
+Não é preciso mexer no código dos carros, do mapa orbital nem do loading: **os carros são 5 fixos e decorativos** (não representam modelo nenhum, ver abaixo) e **a quantidade de órbitas e de linhas da lista vem dos dados**. O título "Os N jogos" também conta sozinho. O loading pré-carrega as cenas do primeiro modelo da arena do Racing, sem lista escrita à mão.
 
 ## Os carros da pista
 
-- São **mocks neutros**: todos com a mesma pintura (creme `#fff3e3` + faixa laranja da UI), **sem cor de modelo**. Durante a corrida eles não representam ninguém, então a fila nunca vira ordem de chegada.
-- **Quantidade = número de execuções atuais do Orbitarium** (`current_arena` do Orbitarium em `archive.json`). Entrou um modelo no Orbitarium, entra um carro; saiu, sai um carro. Nunca escrever o número 5 no código.
+- São **decorativos**: 5 carros fixos (`CAR_COUNT` no topo de `src/components/race/RaceMap.tsx`), todos com a mesma pintura (creme `#fff3e3` + faixa laranja da UI), **sem cor de modelo, nunca**. Não representam ninguém, então a fila nunca vira ordem de chegada.
+- **Adicionar, tirar ou trocar um modelo não mexe nos carros.** O número 5 não vem dos dados e não deve passar a vir.
 - Andam **pela rolagem** (posição = função da rolagem, sem timer): parados no grid do hero com a página no topo, em fila a 58 px um do outro, sem ultrapassagem.
-- A pista **não se quebra com a rolagem**: fica inteira enquanto houver qualquer carro sobre ela (ver "A quebra da pista" abaixo).
-- Depois da linha de chegada, cada carro flutua até o planeta de **um** modelo do Orbitarium (na ordem da arena) e só aí ganha a cor dele. O planeta fica escondido até o carro chegar.
-- Com `prefers-reduced-motion`: carros parados no grid, nada se desfaz, planetas visíveis desde o início.
-- **Modelo só no Racing:** aparece nos cards, no palco e no visor do Racing, nunca vira carro nem estrela. **Modelo só no Orbitarium:** vira estrela/planeta, sem precisar estar no Racing. Nenhum caso exige exceção no código.
+- Chegam à ponta partida da pista, **saltam** (crescem um pouco na saída) e são **puxados para o núcleo da galáxia** do 2º hero numa espiral (`VORTEX_*` em `RaceMap.tsx`: 1,25 volta no sentido em que a galáxia gira, raio fechando, escala 1 → 0,08, somem nos últimos 20%, um lampejo branco no núcleo para cada um). Tudo é função da rolagem: rolar para cima desfaz. O núcleo é o mesmo ponto que a galáxia desenha (`spiralCoreY` em `src/lib/spiral.ts`).
+- Os **planetas do mapa orbital não dependem dos carros**: o mapa aparece sozinho ao entrar na tela (`.reveal-item`).
+- Com `prefers-reduced-motion`: carros parados no grid, sem queda; o fim da pista é o mesmo desenho, parado; planetas visíveis.
+- **Modelo só no Racing:** aparece nos cards, no palco e no visor do Racing. **Modelo só no Orbitarium:** aparece no mapa orbital e na lista. Nenhum caso exige exceção no código.
 
 ## O mapa e a pista (v2)
 
@@ -60,8 +60,8 @@ Não é preciso mexer no código dos carros, do mapa orbital nem do loading: **a
 - **Sombras:** nenhuma peça tem sombra própria nem filtro. `scenery.ts` junta a elipse de sombra de todos os sprites em **dois paths** (um largo e fraco, um justo: a borda fica suave) desenhados embaixo das peças; a posição vem de `KIT_PARTS` (`sceneryKit.ts`). Sprite novo já ganha sombra pelo tipo (`crown`, `building`, `low`, `palm`: a palmeira tem folhas vazadas, então a sombra é pequena e fica só no meio).
 - **Chão:** `<pattern>` com as texturas (`rm-grass`, `rm-sand`, `rm-sea` em `RaceMap.tsx`), e por cima as tintas: manchas de grama, tom mais escuro da mata, chão do entardecer no último trecho e a camada da hora do dia. Atrás do texto do hero há uma área calma (elipse clara, `rm-calm`) para o título e o texto manterem contraste AA sobre a textura.
 - **Orçamento:** o SVG do mapa fica abaixo de 650 elementos (hoje ~600 no pior caso em 1440/1920); `MAX_PIECES` em `scenery.ts` é o teto das peças. Sprite novo custa 2 elementos no `<defs>` (`SCENERY_DEF_ELEMENTS` em `sceneryKit.ts` se conta sozinho). Prefira um conjunto novo a muitas peças soltas.
-- **Motor da rolagem:** `src/components/race/RaceMap.tsx` (carros, chegada, céu, planetas). Por quadro só `transform`/`opacity`.
-- **A quebra da pista (v3):** é um **evento com duração fixa**, não uma função da rolagem. Enquanto houver carro sobre a pista, o último trecho fica inteiro. Quando o último carro sai do fim da pista, roda uma animação de 1,6 s com relógio próprio (rAF, pausa com a aba oculta): rachar 250 ms, soltar e afastar 1,1 s com `cubic-bezier(.16,1,.3,1)`, virar estrela nos últimos 300 ms; o chão e o cenário do fim somem junto. Rolar de volta até um carro voltar à pista roda a mesma animação ao contrário, em 600 ms. As constantes ficam no topo de `RaceMap.tsx` (`BREAK_MS`, `CRACK_MS`, `RELEASE_MS`, `STAR_MS`, `MEND_MS`). Os pedaços (`buildChunks` em `scenery.ts`) são o próprio asfalto e zebra em ladrilhos. O estado (`broken`) também é publicado em `src/lib/raceState.ts`: a galáxia acende quando ele vira verdadeiro. O fim da pista some em degradê (máscara `rm-road-end`), nunca em corte reto. Com movimento reduzido nada disso roda: a pista fica inteira.
+- **Motor da rolagem:** `src/components/race/RaceMap.tsx` (carros, chegada, céu, queda no núcleo da galáxia). Por quadro só `transform`/`opacity`.
+- **O fim da pista (v4):** está **sempre partido**; é um desenho, não uma animação. `src/lib/roadEdge.ts` (`buildRoadEdge`) corta os últimos 240 px da reta de chegada em 10 a 12 **placas** (um Voronoi pequeno sobre a faixa asfalto + zebras, por semente; placas vizinhas dividem a mesma linha de fratura). A primeira fileira fica no lugar: é a borda em zigue-zague de onde os carros saltam. Dali em diante cada placa se afasta, gira, encolhe (1 → 0,55) e escurece (1 → 0,45), com a sombra se separando dela; entre elas, cascalho e lascas de zebra. Cada placa é **um recorte da própria pista** (`clipPath` sobre o mesmo desenho), então leva o asfalto, a faixa central e a zebra que estavam ali, e uma faixa mais escura (`#3b404c`) na borda de baixo faz a espessura. Fica numa camada à parte (`.race-fx`, fora do SVG do mapa: não conta no orçamento). Com GPU real as placas soltas balançam ±1,5 px em 6 s (CSS, só enquanto estão na tela); com movimento reduzido, o mesmo desenho parado. `src/lib/raceState.ts` publica dois fatos: o primeiro carro saltou (a galáxia acende) e a posição da linha de chegada (zona da barra de comparação).
 - **Folgas do cenário:** nenhuma peça chega a menos de 12 px de um card (`CARD_GAP`; as pedras da falésia, mais 8) nem a menos de 16 px das caixas do título, texto, números e botões do hero (`CALM_GAP`), tudo em `scenery.ts` (no celular a folga dos cards não vale: eles ocupam a largura toda). Na vila, as casas ocupam o chão antes das cercas: lance de cerca que cruzaria uma casa ou outro lance não é colocado.
 - **Loading:** `src/lib/boot.ts` (5 etapas reais, teto de 12 s) e `src/components/Loader.tsx`. Etapa nova = item novo em `BOOT_STEPS` e uma chamada de `markStep`. A etapa 2 (`map`) só termina quando o mapa foi calculado **e** todos os sprites e texturas de `public/map` carregaram (`MAP_ASSET_URLS`), para nada aparecer depois que as luzes apagam.
 - **Cards creme:** dentro de `.race-card` os tokens escuros são reapontados (`--ink`, `--ink-2`, `--line`, `--warm`…), então componente novo ali já sai em navy sobre creme. Cor de modelo nunca vira cor de texto sobre creme (só tile, ponto e barra).
@@ -87,18 +87,26 @@ Do Orbitarium para baixo (Orbitarium, Prompts, Arquivo, rodapé). A corrida não
 - **Escopo:** a classe `.space` (em `src/styles/global.css`) nas três seções e no rodapé. Ela reaponta `--ink`, `--ink-2`, `--ink-3` e `--line` para os tokens `--sp-*` (`src/styles/tokens.css`) e troca a fonte. Componente novo dentro de `.space` já sai branco sobre quase preto. `--sp-ink-3` é `.52` (o `.42` do spec dava 3,9:1; texto pequeno precisa de 4,5:1).
 - **Fonte:** Geist (Google Fonts, pesos 400 a 600), em `--f-space`: títulos em peso 500 com `letter-spacing: -0.03em`. A Anybody larga fica só na corrida. O loading espera a Geist na etapa 1 (`SPACE_FONTS` em `src/lib/boot.ts`).
 - **Sem card com caixa e brilho:** a lista do Orbitarium são linhas com divisória fina (`.orbit-row`); a selecionada ganha só um fundo leve e o ponto maior. Botões são pílulas (`.pill`): `.pill--solid` (branca, texto preto: ação principal) e `.pill--glass` (translúcida). Abas dos prompts, filtros e chips do arquivo seguem a mesma regra: translúcido, e o ativo/atual sólido branco. Hover e "ativo" são uma camada cuja opacidade muda (nenhuma cor é animada).
-- **Título dividido:** o h2 do Orbitarium mostra as palavras do nome nas duas bordas (`.split-title`, em `Orbitarium.tsx` e `Orbitarium.css`), com a galáxia entre elas a partir de 1024 px; abaixo disso, uma sobre a outra. As palavras saem de `t.orbitarium.title` (separadas no hífen) e o texto real continua no h2 para leitores de tela. As letras embaralham e resolvem uma vez ao entrar na tela (`DecryptedText` com `animateOn="view"`).
+- **2º hero (v4):** o Orbitarium abre com uma tela inteira (`.orbit-hero`, `min-height: max(640px, 100svh)`, em `Orbitarium.tsx` e `Orbitarium.css`) só com o título dividido e a galáxia: nada mais entra nessa tela. O texto de apoio, o mapa orbital e a lista vêm logo abaixo.
+- **Título dividido:** o h2 do Orbitarium mostra as palavras do nome nas duas bordas (`.split-title`), na mesma linha e no meio da tela, com a galáxia entre elas a partir de 1024 px; abaixo disso, empilhadas e grandes (a primeira à esquerda, a segunda à direita), com a galáxia atrás. As palavras saem de `t.orbitarium.title` (separadas no hífen) e o texto real continua no h2 para leitores de tela. As letras embaralham e resolvem uma vez ao entrar na tela (`DecryptedText` com `animateOn="view"`).
 - **Mapa orbital:** órbitas em linha branca a 18%, sol como brilho branco, planetas como esferas pequenas (cor do modelo + sombreado `orbit-shade`), rótulos em `--sp-ink-2`.
 - **Galáxia espiral** (fundo do espaço, no lugar do Galaxy do React Bits):
   - As partículas são geradas em `src/lib/spiral.ts` (semente fixa): 2 braços logarítmicos, núcleo brilhante, poeira entre os braços, algumas estrelas maiores, mais as estrelas soltas do céu. Quantidade em `SPIRAL_POINTS` (7.000 no desktop, 3.000 no celular) e `SKY_STARS` (600). Cores, inclinação (60°), giro (uma volta a cada 6 min) e parallax ficam no mesmo arquivo.
-  - `src/components/space/SpiralGalaxy.tsx`: WebGL próprio, sem biblioteca. Um `drawArrays(gl.POINTS)` com tamanho por partícula, textura radial gerada em código e mistura aditiva. Canvas fixo dentro do céu (`Background.tsx`); posição, giro e brilho são uniforms (nada muda no DOM por quadro). O núcleo fica no marcador `[data-galaxy-core]` do título e acompanha a página a 60% da velocidade dela; a galáxia some quando a seção Orbitarium sai. Acende em 1,2 s (do núcleo para fora) quando a pista se quebra ou quando o título entra na tela.
+  - `src/components/space/SpiralGalaxy.tsx`: WebGL próprio, sem biblioteca. Um `drawArrays(gl.POINTS)` com tamanho por partícula, textura radial gerada em código e mistura aditiva. Canvas fixo dentro do céu (`Background.tsx`); posição, giro e brilho são uniforms (nada muda no DOM por quadro). O núcleo fica no marcador `[data-galaxy-core]` do título e acompanha a página a 60% da velocidade dela. A galáxia é **presa ao 2º hero** (`[data-galaxy-hero]`): some em degradê na borda de baixo dele (uniform `uClip`) e sai junto com ele, então nunca aparece atrás do texto, do mapa ou da lista. Acende em 1,2 s (do núcleo para fora) quando o primeiro carro salta da pista ou quando o título entra na tela.
   - Regras de WebGL: só com GPU real (`hasGpu()`), DPR 1, montagem no idle (ainda durante o loading: a etapa 5 espera por ela), teto de 30 fps no toque, vigia de 5 quadros seguidos acima de 120 ms que para tudo e mostra a faixa de aviso, `webglcontextlost` tratado, pausa com a aba oculta e enquanto o céu está atrás do mapa.
-  - Sem GPU, com movimento reduzido ou depois de uma falha: `src/components/space/SpiralStill.tsx` desenha **a mesma espiral** uma vez num canvas 2D dentro da seção Orbitarium (sem animação) e o céu usa as estrelas paradas em CSS (`.bg__stars`).
+  - Sem GPU, com movimento reduzido ou depois de uma falha: `src/components/space/SpiralStill.tsx` desenha **a mesma espiral** uma vez num canvas 2D dentro do 2º hero (sem animação, sem passar das bordas dele) e o céu usa as estrelas paradas em CSS (`.bg__stars`).
 - `src/components/bits/Galaxy.tsx` e `StarBorder.tsx` não são mais usados (ficaram no repo, fora do bundle).
+
+## Barra de comparação por zona (v4)
+
+- A barra (`CompareBar`), o popover "+ modelo" e a faixa de aviso (`MotionNotice`) têm **duas peles**: **corrida** (creme translúcido, texto navy, chips brancos, botão principal navy) e **espaço** (preto translúcido, texto branco, chips translúcidos, botão principal pílula branca).
+- A zona é decidida pelo meio da janela em relação à **linha de chegada do mapa**: `src/lib/zone.ts` lê a posição em `raceState` e escreve `data-zone="race|space"` no `<html>` (só quando muda).
+- As peles são tokens `--zone-*` em `src/styles/tokens.css` (o bloco `:root[data-zone='space']` troca os valores). Os componentes só usam esses tokens; cor nova de pele = token novo nos dois blocos. A troca é um cross-fade de 300 ms (`--zone-t`) em cor de fundo, borda, texto, sombra e raio: é a exceção documentada à regra de só `transform`/`opacity` (acontece uma vez por troca de zona, não por quadro). Com movimento reduzido a troca é imediata.
+- Contraste AA nas duas peles (números no comentário dos tokens). Elemento flutuante novo (toast, etc.) deve usar os mesmos tokens.
 
 ## Escolher a cor de um modelo novo
 
-O carro chega sem cor; quem adiciona o modelo decide a cor dele. Para não estragar o visual:
+Quem adiciona o modelo decide a cor dele (ponto, barra, planeta). Para não estragar o visual:
 
 1. **Se o original já tem cor**, use a dela: o gerador da imagem do README (`scripts/render-benchmark-assets.mjs` no repo de benchmarks) tem um array de cores por posição da arena. A cor é por benchmark (a chave em `models.ts` é `benchmark:id`).
 2. **Se não tem**, escolha uma que cumpra todas as regras:
@@ -107,17 +115,19 @@ O carro chega sem cor; quem adiciona o modelo decide a cor dele. Para não estra
    - contraste de pelo menos 7:1 sobre `#080f1d`, e o texto navy `#0f1a2b` tem de ler bem em cima dela (no palco o nome vai em navy sobre tiles na cor do modelo);
    - **reservadas, não usar:** vermelho da zebra `#e8423a`, laranja da UI `#fdaf6d`/`#ffb76b`, ciano da UI `#85e4eb`/`#80e9f2`, branco puro;
    - conferir em print o chip, o ponto, a barra do card e o planeta lado a lado com as outras cores.
-3. Cor de modelo é **só identidade** (ponto, barra de 3 px, contorno, planeta). Nunca vira fundo grande nem botão.
+3. Cor de modelo é **só identidade** (ponto, barra de 3 px, contorno, planeta). Nunca vira fundo grande nem botão, e nunca vai para os carros.
 4. Fora da arena atual, todo modelo usa o cinza `#8fa5bf` (já é automático em `colorOf`).
 
 ## Onde estão as coisas
 
 | O quê | Onde |
 |---|---|
-| Spec e regras de design | `_spec/spec-v3.md` (v3), `_spec/spec-v2.md` (v2) e `_spec/spec.md` (v1) |
+| Spec e regras de design | `_spec/spec-v4.md` (v4), `_spec/spec-v3.md` (v3), `_spec/spec-v2.md` (v2) e `_spec/spec.md` (v1) |
 | Espaço: tokens, pílulas, título de seção | `src/styles/tokens.css` (`--sp-*`), `src/styles/global.css` (`.space`, `.pill`, `.space-title`) |
 | Galáxia espiral | `src/lib/spiral.ts`, `src/components/space/`, `src/components/Background.tsx` |
-| Quebra da pista | `src/components/race/RaceMap.tsx`, `src/lib/raceState.ts` |
+| Fim partido da pista, queda dos carros | `src/lib/roadEdge.ts`, `src/components/race/RaceMap.tsx`, `src/lib/raceState.ts` |
+| 2º hero do Orbitarium | `src/components/Orbitarium.tsx`, `src/components/Orbitarium.css` |
+| Peles da barra de comparação e do aviso | `src/lib/zone.ts`, `src/styles/tokens.css` (`--zone-*`), `src/components/CompareBar.css`, `src/components/MotionNotice.css` |
 | Mapa, pista, carros, chegada | `src/components/race/`, `src/lib/track.ts`, `src/lib/scenery.ts`, `src/lib/sceneryKit.ts` |
 | Sprites e texturas do mapa | `public/map/` (gerado), folhas em `design/magnific-map/`, recorte em `scripts/cut-map-sprites.cjs` |
 | Loading (luzes de largada) | `src/lib/boot.ts`, `src/components/Loader.tsx` |

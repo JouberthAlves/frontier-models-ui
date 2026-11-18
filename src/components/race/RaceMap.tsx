@@ -1,57 +1,55 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import SceneryDefs from './SceneryDefs';
-import { orbitArena } from '../../data/archive';
-import { colorOf } from '../../data/models';
 import { markStep, preloadImages } from '../../lib/boot';
+import { hasGpu, useGalaxyOff } from '../../lib/gpu';
 import { useReducedMotion } from '../../lib/motion';
-import { setRoadBroken } from '../../lib/raceState';
-import { buildChunks, buildScenery, type Chunk, type ChunkKind, type Rect, type Scenery } from '../../lib/scenery';
+import { setFinishY, setRoadBroken } from '../../lib/raceState';
+import { buildRoadEdge, type RoadEdge } from '../../lib/roadEdge';
+import { buildScenery, type Rect, type Scenery } from '../../lib/scenery';
 import { MAP_ASSET_URLS, mapAsset, TEXTURES, TEXTURE_SIZE } from '../../lib/sceneryKit';
+import { measureSpiralAnchor, spiralCoreY } from '../../lib/spiral';
 import { buildTrack, CAR_SPACING, TRACK_STEP, type BlockRect, type Track, type TrackSide } from '../../lib/track';
 import './RaceMap.css';
 
 /**
- * The racing zone (spec-v2): a pastel top-down map behind the hero and the Racing section, the
- * S-shaped track computed from the real block rectangles, neutral cars driven by the scroll
- * position, the finish line, and the zero-g flight of each car to its Orbitarium planet. One car
- * per current Orbitarium run (from archive.json).
+ * The racing zone (spec-v2, spec-v4): a pastel top-down map behind the hero and the Racing
+ * section, the S-shaped track computed from the real block rectangles, neutral cars driven by
+ * the scroll position, the finish line, and the broken end of the road.
  *
- * The break-up of the last stretch is NOT tied to the scroll (spec-v3 §2): the road stays whole
- * while any car is on it; when the last car leaves its end, one timed animation runs (crack,
- * let go and drift, turn into stars). Scrolling back until a car is on the road again plays it
- * backwards, once.
+ * The end of the road is always broken (spec-v4 §1): a jagged edge, then slabs of road that
+ * fall away into the sky (lib/roadEdge.ts). It is a drawing, not an animation.
  *
- * Per frame only `transform` / `opacity` change, on the cars and on the visible pieces.
+ * The cars are decorative (spec-v4 §2): they drive to the jagged edge, jump off it and are
+ * pulled into the nucleus of the galaxy of the second hero along a spiral, where they vanish.
+ * Everything is a function of the scroll position, so scrolling back undoes it.
+ *
+ * Per frame only `transform` / `opacity` change, on the cars and their flashes.
  */
 
+/**
+ * Number of cars. A fixed, decorative number on purpose (spec-v4 §2): the cars stand for no
+ * model and end in the galaxy, so adding or removing a model never touches them.
+ */
+const CAR_COUNT = 5;
 const NAV_H = 64;
 const GRID_TOP = NAV_H + 34;
-/** Length of the last stretch (before the finish) that breaks up. */
+/** Length of the last stretch (before the finish) whose ground turns to dusk and fades. */
 const BREAK_BEFORE_FINISH = 640;
 const BAND = 220;
 /** The ground fades out over this many px at the very end of the map. */
 const GROUND_FADE = 200;
 /** px each stretch of road is drawn past its end, under the next one. */
 const SEAM_OVERLAP = 8;
-/** The road fades out over its last px instead of ending in a square cut. */
-const ROAD_END_FADE = 90;
-/** The end of the road is broken for good (spec change 2026-11-18, owner): over its last px the
- *  road turns into loose pieces that hang in the air, and the cars jump off that edge into space. */
-const EDGE_LEN = 240;
+/** The fall into the galaxy: turns around the nucleus (the way the galaxy turns: clockwise). */
+const VORTEX_TURNS = 1.25;
+/** How fast the radius closes (1 = evenly; above 1 = quicker at first). */
+const VORTEX_PULL = 1.6;
+/** The car ends at this fraction of its size, and goes out over the last fifth of the fall. */
+const VORTEX_END_SCALE = 0.08;
+const VORTEX_FADE_FROM = 0.8;
 const TINT_GOLD = [255, 196, 120] as const;
 const TINT_DUSK = [60, 70, 120] as const;
 const TINT_NIGHT = [16, 30, 53] as const;
-/**
- * Same colors as the --map-* tokens (road) and as the sprites (leaves, roof tiles): the pieces
- * that break off are tinted for their hour of the day.
- */
-const CHUNK_RGB: Record<ChunkKind, readonly number[]> = {
-  asphalt: [95, 102, 119],
-  'kerb-red': [227, 93, 82],
-  'kerb-white': [251, 247, 239],
-  leaf: [98, 164, 62],
-  roof: [222, 98, 54]
-};
 
 /** Sprites and ground textures of the map, loaded once (the loader's "map" step waits for them). */
 let mapAssets: Promise<void> | null = null;
@@ -64,17 +62,12 @@ interface Layout {
   breakLen: number;
   track: Track;
   scenery: Scenery;
-  chunks: Chunk[];
+  /** The broken end of the road: slabs, gravel, where the cars jump. */
+  edge: RoadEdge;
   /** Phones: per track sample, how hidden a car is there (1 = under a card). Null on wider screens. */
   cover: Float32Array | null;
-  /** Document y the leading car is at when its flight ends. */
-  floatEndY: number;
-  /**
-   * The Orbitarium heading and lede, which the flying cars must not cross: they go down the
-   * free margin at `x` while between `top` and `bottom`. `x` is null when there is no margin
-   * to use (phones, tablets): there the cars dim while they are behind the text.
-   */
-  avoid: { x: number | null; top: number; bottom: number } | null;
+  /** Marker of the nucleus of the galaxy (second hero), in the coordinates of the map. */
+  core: { x: number; y: number };
   signature: number[];
 }
 
@@ -84,11 +77,8 @@ const smooth = (t: number) => {
   const c = clamp(t);
   return c * c * (3 - 2 * c);
 };
-const bez = (p0: number, p1: number, p2: number, p3: number, t: number) => {
-  const u = 1 - t;
-  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
-};
 const rgba = (rgb: readonly number[], alpha: number) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha.toFixed(3)})`;
+
 
 /** Dusk tint at a fraction of the map height (from the 50% stop down). */
 function duskAt(f: number, nightAt: number): { rgb: number[]; alpha: number } {
@@ -101,10 +91,16 @@ function duskAt(f: number, nightAt: number): { rgb: number[]; alpha: number } {
   return { rgb: [...TINT_NIGHT], alpha: 0.5 * clamp((1 - f) / Math.max(0.001, 1 - nightAt)) };
 }
 
-/** A map color as it looks under the dusk tint at that height. */
-function tinted(rgb: readonly number[], f: number, nightAt: number): string {
+/**
+ * What is laid over a slab of road so it matches the road it broke from (the dusk tint of the
+ * map at that height) and gets darker as it falls (`bright` 1 → 0.45): one color, one opacity.
+ */
+function slabVeil(f: number, nightAt: number, bright: number): { fill: string; opacity: number } {
   const tint = duskAt(f, nightAt);
-  return `rgb(${rgb.map((value, index) => Math.round(mix(value, tint.rgb[index], tint.alpha))).join(',')})`;
+  const dark = 1 - bright;
+  const opacity = 1 - (1 - tint.alpha) * (1 - dark);
+  const share = opacity > 0 ? (tint.alpha * (1 - dark)) / opacity : 0;
+  return { fill: `rgb(${tint.rgb.map(value => Math.round(value * share)).join(',')})`, opacity };
 }
 
 function measure(root: HTMLElement, previous: Layout | null): Layout | null {
@@ -139,20 +135,16 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
 
   const finishY = finishNode.getBoundingClientRect().top - origin.top;
   const heroTop = heroNode ? heroNode.getBoundingClientRect().top - origin.top : 0;
-  const orbitLayout = document.querySelector<HTMLElement>('.orbitarium__layout');
-  const orbitSvg = document.querySelector<SVGSVGElement>('.orbit-map');
-  const orbitTop = orbitLayout ? orbitLayout.getBoundingClientRect().top - origin.top : finishY + 900;
-  const orbitHalf = orbitSvg ? Math.min(220, orbitSvg.getBoundingClientRect().height / 2) : 160;
-  const floatEndY = orbitTop + orbitHalf;
-  const orbitHead = document.querySelector<HTMLElement>('#orbitarium .section__head');
-  const headRect = orbitHead ? rectOf(orbitHead) : null;
-  const avoid =
-    headRect && headRect.bottom > headRect.top
-      ? { x: headRect.left >= 46 ? Math.max(22, headRect.left / 2) : null, top: headRect.top, bottom: headRect.bottom }
-      : null;
+  // The page tells the compare bar and the notice where the race ends (lib/zone.ts).
+  setFinishY(finishY + origin.top + window.scrollY);
+  // Where the cars end: the nucleus of the galaxy, between the words of the second hero.
+  const anchor = measureSpiralAnchor();
+  const core = anchor
+    ? { x: anchor.x - window.scrollX - origin.left, y: anchor.y - window.scrollY - origin.top }
+    : { x: W / 2, y: finishY + 1000 };
 
   // Nothing moved by 2 px or more: keep the current map.
-  const signature = [W, finishY, floatEndY, avoid?.top ?? 0, avoid?.bottom ?? 0, ...blocks.flatMap(block => [block.left, block.right, block.top, block.bottom])];
+  const signature = [W, finishY, core.x, core.y, ...blocks.flatMap(block => [block.left, block.right, block.top, block.bottom])];
   if (
     previous &&
     previous.signature.length === signature.length &&
@@ -170,7 +162,7 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
     contentRight,
     startY: heroTop + GRID_TOP,
     finishY,
-    cars: orbitArena.length
+    cars: CAR_COUNT
   });
   // Whole pixels: the ground is made of rects that meet at breakY (and at the fade line), and a
   // joint on a fraction of a pixel shows as a hairline across the map.
@@ -178,7 +170,7 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
   const breakY = Math.round(Math.max(blocks[0].bottom, finishY - BREAK_BEFORE_FINISH));
   const breakLen = track.lenAtY(breakY);
   const scenery = buildScenery({ width: W, height: H, breakY, blocks, calm, track, contentLeft });
-  const chunks = buildChunks(track, breakLen, scenery.pieces, W);
+  const edge = buildRoadEdge(track, W);
 
   // Phones: the road runs behind the cards, so a car beside one would show as a sliver past its
   // edge. Per sample: is the centre line under a card? Blurred over ±24 px, so cars fade.
@@ -200,7 +192,7 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
     }
   }
 
-  return { W, H, breakY, breakLen, track, scenery, chunks, cover, floatEndY, avoid, signature };
+  return { W, H, breakY, breakLen, track, scenery, edge, cover, core, signature };
 }
 
 interface RoadProps {
@@ -270,6 +262,9 @@ function Pieces({ scenery, tail }: { scenery: Scenery; tail: boolean }) {
 
 export default function RaceMap() {
   const reduced = useReducedMotion();
+  const galaxyOff = useGalaxyOff();
+  // The WebGL galaxy follows the page slower than it scrolls; the still picture does not.
+  const galaxyLive = !reduced && !galaxyOff && hasGpu();
   const rootRef = useRef<HTMLDivElement>(null);
   const carsRef = useRef<HTMLDivElement>(null);
   const fxRef = useRef<SVGSVGElement>(null);
@@ -317,27 +312,24 @@ export default function RaceMap() {
     };
   }, []);
 
-  // The scroll-driven engine: cars, finish flags, break-up, sky and planets.
+
+  // The scroll-driven engine: cars, finish flags, sky, and the fall of the cars into the galaxy.
   useLayoutEffect(() => {
     const carsRoot = carsRef.current;
-    const root = rootRef.current;
-    if (!layout || !carsRoot || !root) return undefined;
-    const { track, W, chunks, cover, breakLen, floatEndY, avoid } = layout;
-    const cars = Array.from(carsRoot.querySelectorAll<HTMLElement>('.race-car')).map(el => ({
-      el,
-      tint: el.querySelector<SVGElement>('.race-car__tint')
-    }));
+    if (!layout || !carsRoot) return undefined;
+    const { track, W, edge, cover, core } = layout;
+    const cars = Array.from(carsRoot.querySelectorAll<HTMLElement>('.race-car'));
+    const flashes = Array.from(carsRoot.querySelectorAll<HTMLElement>('.race-flash'));
     const count = cars.length;
     const scale = track.carScale;
     const gridLead = track.gridLead;
     const gridY = track.at(gridLead).y;
-    const end = track.at(track.length);
-    const floatSpan = Math.max(300, floatEndY - track.endY);
+    // The cars leave the road at its jagged edge.
+    const jumpLen = edge.jumpLen;
+    const jump = track.at(jumpLen);
     const slotShift = track.roadW * 0.16;
     // Page origin of the layers (read once per layout, never per frame).
-    const originRect = carsRoot.getBoundingClientRect();
-    const originX = originRect.left + window.scrollX;
-    const originY = originRect.top + window.scrollY;
+    const originY = carsRoot.getBoundingClientRect().top + window.scrollY;
 
     /** `onGrid` 1 → 0: each car leaves its own grid slot (left / right) and joins the centre line. */
     const placeOnTrack = (index: number, length: number, wobble: number, onGrid: number) => {
@@ -350,83 +342,37 @@ export default function RaceMap() {
         x += Math.sin(a) * shift;
         y -= Math.cos(a) * shift;
       }
-      car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${(p.angle - 90 + wobble).toFixed(1)}deg) scale(${scale})`;
-      car.el.style.opacity = cover ? (1 - cover[clamp(Math.round(length / TRACK_STEP), 0, cover.length - 1)]).toFixed(2) : '1';
-      if (car.tint) car.tint.style.opacity = '0';
+      car.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${(p.angle - 90 + wobble).toFixed(1)}deg) scale(${scale})`;
+      car.style.opacity = cover ? (1 - cover[clamp(Math.round(length / TRACK_STEP), 0, cover.length - 1)]).toFixed(2) : '1';
     };
 
     carsRoot.dataset.ready = 'true';
 
     if (reduced) {
-      // Reduced motion: cars parked on the grid, nothing breaks, planets stay visible.
+      // Reduced motion: cars parked on the grid, no fall, no flash.
       for (let i = 0; i < count; i += 1) placeOnTrack(i, gridLead - i * CAR_SPACING, 0, 1);
+      flashes.forEach(flash => {
+        flash.style.opacity = '0';
+      });
       return undefined;
     }
 
     const sky = document.querySelector<HTMLElement>('[data-race-sky]');
-    const fx = fxRef.current;
     const flags = flagsRef.current;
-    // Tail of the map: the ground, scenery and dusk tint fade together; the road is one piece.
-    const tailLayers = Array.from(root.querySelectorAll<SVGElement>('[data-tail]'));
-    const tailShadow = root.querySelector<SVGElement>('[data-tail-shadow]');
-    const tailRoad = root.querySelector<SVGElement>('[data-tail-road]');
-    const chunkNodes = fx
-      ? Array.from(fx.querySelectorAll<SVGGElement>('[data-chunk]')).map(g => ({
-          g,
-          body: g.firstElementChild as SVGElement | null,
-          star: g.lastElementChild as SVGElement | null
-        }))
-      : [];
-    let planets: { wrap: HTMLElement | SVGElement; body: Element | null }[] = [];
-    const planetShown: number[] = [];
-    const findPlanets = () => {
-      planets = Array.from(document.querySelectorAll<SVGElement>('[data-orbit-planet]'))
-        .sort((a, b) => Number(a.dataset.orbitPlanet) - Number(b.dataset.orbitPlanet))
-        .map(wrap => ({ wrap, body: wrap.querySelector('[data-orbit-body]') }));
-      planetShown.length = 0;
-    };
-    const showPlanet = (index: number, opacity: number) => {
-      const planet = planets[index];
-      if (!planet) return;
-      const value = Math.round(opacity * 100) / 100;
-      if (planetShown[index] === value) return;
-      planetShown[index] = value;
-      planet.wrap.style.opacity = String(value);
-      planet.wrap.dataset.arrival = value === 0 ? 'waiting' : value >= 0.5 ? 'arrived' : 'landing';
-    };
-
     const carsSpan = (count - 1) * CAR_SPACING;
-
-    /* ---------- the broken end of the road (static) ---------- */
-    const tailSpan = Math.max(1, track.length - breakLen);
-    // The broken end: pieces of the last EDGE_LEN px of road, the further along the more loose.
-    const edgeStart = track.length - Math.min(EDGE_LEN, tailSpan);
-    const edgeK = chunks.map(chunk =>
-      chunk.kind === 'leaf' || chunk.kind === 'roof' ? -1 : clamp((chunk.at - edgeStart) / Math.max(1, track.length - edgeStart))
-    );
-    const applyEdge = () => {
-      if (tailRoad) tailRoad.style.opacity = '1';
-      if (tailShadow) tailShadow.style.opacity = '1';
-      if (!fx) return;
-      fx.style.display = 'block';
-      chunkNodes.forEach((node, index) => {
-        const chunk = chunks[index];
-        if (!chunk || !node.body || !node.star) return;
-        const k = edgeK[index];
-        if (k <= 0) {
-          node.body.style.opacity = '0';
-          node.star.style.opacity = '0';
-          return;
-        }
-        // Still attached at the start of the edge, more and more adrift towards the end.
-        const drift = 0.04 + 0.42 * Math.pow(k, 1.7);
-        const x = chunk.x + chunk.dx * drift * 0.45;
-        const y = chunk.y + chunk.dy * drift * 0.5;
-        node.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(chunk.turn + chunk.rot * drift * 0.5).toFixed(1)})`);
-        node.body.setAttribute('transform', `scale(${mix(1, 0.72, k).toFixed(3)})`);
-        node.body.style.opacity = mix(1, 0.8, k).toFixed(3);
-        node.star.style.opacity = '0';
-      });
+    /** y of the nucleus, in the coordinates of the cars, with the page scrolled to `scrollY`. */
+    const coreAt = (scrollY: number, vh: number) => spiralCoreY(core.y + originY, scrollY, vh, galaxyLive) - originY;
+    // Narrow screens: the spiral is squeezed sideways so no car leaves the page.
+    const sideRoom = Math.min(core.x, W - core.x) - 20;
+    const flashShown = new Array<number>(count).fill(-1);
+    const flash = (index: number, x: number, y: number, p: number) => {
+      const node = flashes[index];
+      if (!node) return;
+      const value = p <= 0 || p >= 1 ? 0 : Math.round(Math.sin(Math.PI * p) * 85) / 100;
+      if (value === 0 && flashShown[index] === 0) return;
+      flashShown[index] = value;
+      node.style.opacity = String(value);
+      if (value > 0) node.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${(0.35 + 1.1 * p).toFixed(3)})`;
     };
 
     let raf = 0;
@@ -442,8 +388,7 @@ export default function RaceMap() {
       const blend = clamp(sy / (vh * 0.6));
       const targetY = Math.max(gridY, sy - originY + vh * 0.58 * blend + (1 - blend) * gridY);
       const lead = targetY <= track.endY ? track.lenAtY(targetY) : track.length + (targetY - track.endY);
-      const flying = lead > track.length && lead - (count - 1) * CAR_SPACING < track.length + floatSpan;
-      if (lead === lastLead && vh === lastVh && !flying) return;
+      if (lead === lastLead && vh === lastVh) return;
       const first = Number.isNaN(lastLead);
       const wobble = first ? 0 : clamp((lead - lastLead) / 40, -1, 1);
       lastLead = lead;
@@ -456,69 +401,53 @@ export default function RaceMap() {
         flags?.classList.toggle('is-waving', lead >= track.finishLen);
       }
 
-      // The end of the road is broken from the start (applyEdge); when the last car has jumped
-      // off it, the galaxy lights up.
-      if (first) applyEdge();
-      setRoadBroken(lead - carsSpan > track.length);
+      // The galaxy lights up when the first car jumps off the road.
+      setRoadBroken(lead > jumpLen);
 
-      if (lead > track.length && (!planets.length || !planets[0].wrap.isConnected)) findPlanets();
-
+      // The fall lasts this many px of scroll per car: the last one reaches the nucleus about
+      // when the second hero comes to rest under the nav (where the menu link scrolls to).
+      const fall = Math.max(360, core.y - jump.y + vh * 0.08 - carsSpan - NAV_H - 8);
+      const coreNow = coreAt(sy, vh);
       const onGrid = 1 - smooth((lead - gridLead) / 160);
       for (let i = 0; i < count; i += 1) {
         const d = lead - i * CAR_SPACING;
         const car = cars[i];
-        if (d <= track.length) {
+        if (d <= jumpLen) {
           placeOnTrack(i, Math.max(0, d), wobble, onGrid);
-          if (planets.length) showPlanet(i, 0);
+          flash(i, 0, 0, 0);
           continue;
         }
-        // Zero-g: a cubic Bézier from the end of the road to this car's planet. The car leaves
-        // the road straight ahead at the speed it had on it (so the line keeps its spacing: no
-        // pile-up at the end of the road) and slows down as it reaches the planet.
-        const u = clamp((d - track.length) / floatSpan);
-        const t = u * (1 + 0.5 * u - 0.5 * u * u);
-        const planetOpacity = clamp((t - 0.75) / 0.25);
-        showPlanet(i, planetOpacity);
-        if (t >= 1) {
-          car.el.style.opacity = '0';
+        const u = clamp((d - jumpLen) / fall);
+        // A short white flash in the nucleus as the car goes out.
+        flash(i, core.x, coreNow, (u - 0.86) / 0.14);
+        if (u >= 1) {
+          car.style.opacity = '0';
           continue;
         }
-        const rect = planets[i]?.body?.getBoundingClientRect();
-        const tx = rect ? rect.left + rect.width / 2 + window.scrollX - originX : W / 2;
-        const ty = rect ? rect.top + rect.height / 2 + sy - originY : floatEndY;
-        const side = i % 2 ? 1 : -1;
-        const y = bez(end.y, end.y + floatSpan / 3, ty - 260, ty, t);
-        let x: number;
-        let dim = 1;
-        if (avoid && avoid.x !== null && avoid.bottom < ty) {
-          // Around the Orbitarium heading and lede: out to the free margin above the text,
-          // straight down beside it, then across to the planet.
-          const above = avoid.top - 50;
-          const below = avoid.bottom + 24;
-          // Each car keeps its own lane in the margin so two cars never sit on the same pixel.
-          const lane = clamp(avoid.x + ((i % 3) - 1) * 26, 18, Math.max(18, avoid.x * 2 - 18));
-          if (y <= above) x = mix(end.x, lane, smooth((y - end.y - 40) / Math.max(1, above - end.y - 40)));
-          else if (y <= below) x = lane;
-          else x = mix(lane, tx, smooth((y - below) / Math.max(80, ty - below)));
-          // A planet level with the text: the car finishes the move across while it fades.
-          x = mix(x, tx, smooth((t - 0.72) / 0.23));
-        } else {
-          const c2 = clamp(tx - side * 160, 24, W - 24);
-          x = bez(end.x, end.x, c2, tx, t);
-          // No free margin (phones, tablets): the car dims while it is behind the text.
-          if (avoid) dim = 1 - 0.75 * smooth((y - avoid.top + 70) / 60) * (1 - smooth((y - avoid.bottom) / 60));
-        }
-        const turn = t * t * (220 + (i % 4) * 60) * side;
-        car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${turn.toFixed(1)}deg) scale(${(scale * mix(1, 0.55, t) * (1 + 0.38 * Math.sin(Math.PI * Math.min(1, t / 0.32)))).toFixed(3)})`;
-        car.el.style.opacity = (dim * (1 - clamp((t - 0.75) / 0.2))).toFixed(3);
-        if (car.tint) car.tint.style.opacity = clamp(t * 1.4).toFixed(3);
+        // A spiral around the nucleus, in polar coordinates. It starts at the edge of the road
+        // (radius and angle of that point as seen from the nucleus when this car jumped), the
+        // radius closes and the angle runs faster and faster, the way the galaxy turns.
+        const vx = jump.x - core.x;
+        const vy = jump.y - coreAt(sy - (d - jumpLen), vh);
+        const r0 = Math.hypot(vx, vy) || 1;
+        const theta = Math.atan2(vy, vx) + VORTEX_TURNS * 2 * Math.PI * Math.pow(u, 1.5);
+        const r = r0 * Math.pow(1 - u, VORTEX_PULL);
+        const squeeze = mix(1, Math.min(1, sideRoom / (r0 * 0.55)), smooth(u / 0.3));
+        const x = clamp(core.x + Math.cos(theta) * r * squeeze, 14, W - 14);
+        const y = coreNow + Math.sin(theta) * r;
+        // Nose: straight ahead as it jumps, then towards the nucleus, then along the spiral.
+        const along = (theta * 180) / Math.PI + 180 - 90 * smooth(u / 0.45);
+        const heading = mix(90, along, smooth(u / 0.15));
+        // The jump: the car grows a little as it leaves the edge, then shrinks all the way in.
+        const size = scale * mix(1, VORTEX_END_SCALE, smooth(u)) * (1 + 0.38 * Math.sin(Math.PI * Math.min(1, u / 0.2)));
+        car.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${(heading - 90).toFixed(1)}deg) scale(${size.toFixed(3)})`;
+        car.style.opacity = (1 - clamp((u - VORTEX_FADE_FROM) / (1 - VORTEX_FADE_FROM))).toFixed(3);
       }
     };
 
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
     };
-    findPlanets();
     update();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
@@ -527,31 +456,41 @@ export default function RaceMap() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
       if (sky) sky.style.opacity = '';
-      [...tailLayers, tailShadow, tailRoad].forEach(node => {
-        if (node) node.style.opacity = '';
-      });
-      if (fx) fx.style.display = 'none';
-      planets.forEach(planet => {
-        planet.wrap.style.opacity = '';
-        delete planet.wrap.dataset.arrival;
-      });
     };
-  }, [layout, reduced]);
+  }, [layout, reduced, galaxyLive]);
+
+  // The loose slabs sway very slowly (CSS), only with a real GPU and only while they are on screen.
+  const floating = !reduced && hasGpu();
+  useEffect(() => {
+    const fx = fxRef.current;
+    if (!fx || !floating || typeof IntersectionObserver !== 'function') return undefined;
+    const observer = new IntersectionObserver(entries => {
+      fx.classList.toggle('is-live', entries.some(entry => entry.isIntersecting));
+    });
+    observer.observe(fx);
+    return () => {
+      observer.disconnect();
+      fx.classList.remove('is-live');
+    };
+  }, [floating, layout]);
 
   const cars = (
     <div key="cars" ref={carsRef} className="race-cars" aria-hidden="true">
-      {orbitArena.map(run => (
-        <div key={run.key} className="race-car" style={{ ['--model' as string]: colorOf(run) }}>
+      {Array.from({ length: CAR_COUNT }, (_, index) => (
+        <div key={index} className="race-car">
           <svg viewBox="-14 -22 28 44" width="28" height="44" focusable="false">
             <rect x="-8" y="-16" width="20" height="38" rx="7" className="race-car__shadow" />
             <path d="M-12 -13h4v8h-4zM8 -13h4v8h-4zM-12 6h4v8h-4zM8 6h4v8h-4z" className="race-car__tyres" />
             <rect x="-10" y="-19" width="20" height="38" rx="7" className="race-car__paint" />
-            <rect x="-10" y="-19" width="20" height="38" rx="7" className="race-car__tint" />
             <rect x="-2" y="-19" width="4" height="38" className="race-car__stripe" />
             <rect x="-6.5" y="-3" width="13" height="9" rx="2.5" className="race-car__glass" />
             <path d="M-7.5 15.4h4v2.2h-4zM3.5 15.4h4v2.2h-4z" className="race-car__lights" />
           </svg>
         </div>
+      ))}
+      {/* One flash per car, in the nucleus of the galaxy, as that car goes out. */}
+      {Array.from({ length: CAR_COUNT }, (_, index) => (
+        <span key={`flash-${index}`} className="race-flash" />
       ))}
     </div>
   );
@@ -565,7 +504,8 @@ export default function RaceMap() {
     );
   }
 
-  const { W, H, breakY, breakLen, track, scenery, chunks } = layout;
+  const { W, H, breakY, breakLen, track, scenery, edge } = layout;
+  const tailOffset = Math.floor(breakLen / TRACK_STEP) * TRACK_STEP;
   const roadW = track.roadW;
   const finish = track.at(track.finishLen);
   const nightAt = (H - 170) / H;
@@ -581,16 +521,15 @@ export default function RaceMap() {
   if (bandEnd / H < 0.85) tailStops.push({ at: 0.85, color: rgba(TINT_DUSK, 0.18) });
   if (bandEnd / H < nightAt) tailStops.push({ at: nightAt, color: rgba(TINT_NIGHT, 0.5) });
   tailStops.push({ at: 1, color: rgba(TINT_NIGHT, 0) });
-  const slots = orbitArena.map((run, index) => {
+  const slots = Array.from({ length: CAR_COUNT }, (_, index) => {
     const p = track.at(track.gridLead - index * CAR_SPACING + 24);
-    return { key: run.key, x: p.x + (index % 2 ? 1 : -1) * roadW * 0.16, y: p.y };
+    return { key: index, x: p.x + (index % 2 ? 1 : -1) * roadW * 0.16, y: p.y };
   });
   const startLine = track.at(track.gridLead + 34);
-  const { village, bridge, cliff, river, moon, stand, shadows, calmBox } = scenery;
+  const { village, bridge, cliff, river, stand, shadows, calmBox } = scenery;
   // Ground textures: 512 px tiles, smaller on phones (where every piece is smaller too).
   const tile = W < 768 ? TEXTURE_SIZE * 0.62 : TEXTURE_SIZE;
   const fadeY = Math.round(Math.max(breakY, H - GROUND_FADE));
-  const tailTop = breakY - 80;
   // Darker ground of the woods: fades in at 60% of the map and hands over to the dusk ground of
   // the last stretch (or ends at 92%, when the last stretch starts lower than that).
   const woodsTop = H * 0.6;
@@ -676,14 +615,10 @@ export default function RaceMap() {
             {/* Each stretch runs a few px into the next one, so no seam shows where they meet. */}
             <path id="rm-road-body" d={track.slice(0, breakLen + SEAM_OVERLAP)} />
             <path id="rm-road-tail" d={track.slice(breakLen, track.length)} />
-            {/* The road does not end in a square cut: its last px fade out. */}
-            <linearGradient id="rm-road-end-fade" gradientUnits="userSpaceOnUse" x1="0" y1={track.endY - ROAD_END_FADE} x2="0" y2={track.endY}>
-              <stop offset="0" stopColor="#fff" />
-              <stop offset="1" stopColor="#000" />
-            </linearGradient>
-            <mask id="rm-road-end" maskUnits="userSpaceOnUse" x="0" y={tailTop} width={W} height={H - tailTop}>
-              <rect x="0" y={tailTop} width={W} height={H - tailTop} fill="url(#rm-road-end-fade)" />
-            </mask>
+            {/* The whole road stops where the slabs of its broken end start (the fx layer). */}
+            <clipPath id="rm-road-keep">
+              <path d={edge.keep} />
+            </clipPath>
             {/* Moon glow: light that falls off to nothing (a flat fill reads as a grey disc). */}
             <radialGradient id="rm-moon-glow">
               <stop offset="0.3" className="rm-stop-moon" stopOpacity="0.26" />
@@ -692,7 +627,7 @@ export default function RaceMap() {
           </defs>
 
           {/* Ground of the last stretch: fades after the finish line. Drawn under everything. */}
-          <g data-tail="ground">
+          <g>
             {/* One px taller than its share: the joint with the fading rect never shows. */}
             <rect x="0" y={breakY} width={W} height={fadeY - breakY + 1} fill="url(#rm-grass)" />
             <rect x="0" y={fadeY} width={W} height={H - fadeY} fill="url(#rm-grass)" mask="url(#rm-fade)" />
@@ -765,21 +700,20 @@ export default function RaceMap() {
             </>
           )}
 
-          {/* Road. The last stretch is one piece: it stays whole until the last car has left it,
-              then goes out as its pieces (the fx layer) take its place. */}
+          {/* Road. The last stretch is cut where its broken end starts. */}
           <g fill="none" strokeLinejoin="round">
-            <g data-tail-shadow mask="url(#rm-road-end)">
+            <g clipPath="url(#rm-road-keep)">
               <RoadShadow id="rm-road-tail" roadW={roadW} />
             </g>
             <RoadShadow id="rm-road-body" roadW={roadW} />
-            <g data-tail-road mask="url(#rm-road-end)">
-              <Road id="rm-road-tail" offset={Math.floor(breakLen / TRACK_STEP) * TRACK_STEP} roadW={roadW} />
+            <g clipPath="url(#rm-road-keep)">
+              <Road id="rm-road-tail" offset={tailOffset} roadW={roadW} />
               {finishMark}
             </g>
           </g>
 
           {/* Scenery of the last stretch: fades with its ground. */}
-          <g data-tail="scenery">
+          <g>
             {shadows.tailSoft && <path d={shadows.tailSoft} className="rm-shade" />}
             {shadows.tailCore && <path d={shadows.tailCore} className="rm-shade" />}
             <Pieces scenery={scenery} tail />
@@ -813,43 +747,68 @@ export default function RaceMap() {
 
           {/* Hour of the day: gold at the top, dusk towards the finish. */}
           <rect x="0" y="0" width={W} height={bandEnd} fill="url(#rm-tint-body)" />
-          <rect data-tail="tint" x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-tint-tail)" />
+          <rect x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-tint-tail)" />
 
-          {/* Night at the finish, over the tint so it stays bright: the first stars and a crescent moon. */}
-          <g data-tail="sky">
-            {scenery.stars.map((star, index) => (
-              <path key={index} d={star.d} className="rm-star" opacity={star.o} />
-            ))}
-            <circle cx={moon.x} cy={moon.y} r={moon.r * 2.6} fill="url(#rm-moon-glow)" />
-            <path
-              d="M.586 -.81A1 1 0 1 0 .586 .81A.82 .82 0 1 1 .586 -.81Z"
-              className="rm-moon"
-              transform={`translate(${moon.x.toFixed(1)} ${moon.y.toFixed(1)}) rotate(210) scale(${moon.r.toFixed(1)})`}
-            />
-          </g>
+          {/* No moon or stars on the race map (owner, 2026-11-18): the sky only appears in space. */}
         </svg>
       </div>
 
-      {!reduced && (
-        <svg
-          key="fx"
-          ref={fxRef}
-          className="race-fx"
-          viewBox={`0 0 ${W} ${H + 760}`}
-          width={W}
-          height={H + 760}
-          style={{ display: 'none' }}
-          aria-hidden="true"
-          focusable="false"
-        >
-          {chunks.map((chunk, index) => (
-            <g key={index} data-chunk transform={`translate(${chunk.x.toFixed(1)} ${chunk.y.toFixed(1)}) rotate(${chunk.turn.toFixed(1)})`}>
-              <path d={chunk.d} fill={tinted(CHUNK_RGB[chunk.kind], chunk.y / H, nightAt)} opacity="0" />
-              <circle r="1.3" className={chunk.cool ? 'fx-star fx-star--cool' : 'fx-star'} />
-            </g>
+      {/* The broken end of the road (spec-v4 §1): slabs of the real road (each one a clipped
+          piece of it, so it carries its asphalt, centre line and kerb), further adrift, smaller
+          and darker towards the end, with gravel between them. Static; drawn with reduced
+          motion too. Outside the map SVG: it does not count in its element budget. */}
+      <svg
+        key="fx"
+        ref={fxRef}
+        className={`race-fx${floating ? ' is-floating' : ''}`}
+        viewBox={`0 ${edge.top} ${W} ${edge.bottom - edge.top}`}
+        width={W}
+        height={edge.bottom - edge.top}
+        style={{ top: edge.top }}
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          {edge.slabs.map((slab, index) => (
+            <clipPath key={index} id={`rm-slab-${index}`}>
+              <path d={slab.d} />
+            </clipPath>
           ))}
-        </svg>
-      )}
+        </defs>
+        {edge.gravel.map((grit, index) => (
+          <circle key={index} cx={grit.x.toFixed(1)} cy={grit.y.toFixed(1)} r={grit.r.toFixed(2)} className="fx-grit" opacity={grit.o.toFixed(2)} />
+        ))}
+        {edge.chips.map((chip, index) => (
+          <path key={index} d={chip.d} className={chip.red ? 'fx-chip fx-chip--red' : 'fx-chip'} opacity={chip.o.toFixed(2)} />
+        ))}
+        {/* The furthest slabs first: the ones nearer the road lie over them. */}
+        {edge.slabs
+          .map((slab, index) => ({ slab, index }))
+          .reverse()
+          .map(({ slab, index }) => {
+            const place = `translate(${(slab.cx + slab.dx).toFixed(1)} ${(slab.cy + slab.dy).toFixed(1)}) rotate(${slab.rot.toFixed(1)}) scale(${slab.scale.toFixed(3)}) translate(${(-slab.cx).toFixed(1)} ${(-slab.cy).toFixed(1)})`;
+            const veil = slabVeil((slab.cy + slab.dy) / H, nightAt, slab.bright);
+            return (
+              <g key={index} className={slab.k > 0 ? 'fx-slab fx-slab--loose' : 'fx-slab'} style={{ animationDelay: `${slab.delay.toFixed(2)}s` }}>
+                {/* Its shadow, further from it the more it has fallen. */}
+                <path
+                  d={slab.d}
+                  className="fx-slab__shadow"
+                  opacity={(0.14 + 0.2 * Math.min(1, slab.k * 3)).toFixed(2)}
+                  transform={`translate(${slab.shadowX.toFixed(1)} ${slab.shadowY.toFixed(1)}) ${place}`}
+                />
+                {/* The thickness of the plate: a darker band along its lower edges. */}
+                <path d={slab.d} className="fx-slab__side" transform={`translate(0.6 ${(4 * slab.scale).toFixed(1)}) ${place}`} />
+                <g transform={place}>
+                  <g clipPath={`url(#rm-slab-${index})`} fill="none" strokeLinejoin="round">
+                    <Road id="rm-road-tail" offset={tailOffset} roadW={roadW} />
+                  </g>
+                  {veil.opacity > 0.01 && <path d={slab.d} fill={veil.fill} opacity={veil.opacity.toFixed(3)} />}
+                </g>
+              </g>
+            );
+          })}
+      </svg>
 
       {cars}
     </>

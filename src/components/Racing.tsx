@@ -190,7 +190,7 @@ export default function Racing() {
           <p className="caption racing__note">{t.racing.note}</p>
         </div>
 
-        {/* Finish line of the track, then room for the road to end and the cars to float away. */}
+        {/* Finish line of the track, then room for the broken end of the road, where the cars jump off. */}
         <div className="racing__finish" aria-hidden="true">
           <span className="racing__finish-line" data-track-finish />
         </div>

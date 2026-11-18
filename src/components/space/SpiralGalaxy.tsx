@@ -5,11 +5,12 @@ import { observeReveal } from '../../lib/reveal';
 import {
   buildSpiral,
   measureSpiralAnchor,
-  SPIRAL_FOLLOW,
+  SPIRAL_CLIP_FADE,
   SPIRAL_IGNITE_MS,
   SPIRAL_ROLL,
   SPIRAL_TILT,
   SPIRAL_TURN_SECONDS,
+  spiralCoreY,
   spiralRadius,
   type SpiralAnchor
 } from '../../lib/spiral';
@@ -20,8 +21,10 @@ import './SpiralGalaxy.css';
  * `gl.POINTS` (a size per particle, a radial glow texture made in code, additive blending) for
  * the disc, its nucleus and the loose stars of the sky.
  *
- * The canvas is fixed behind the page; the nucleus sits between the two words of the Orbitarium
- * title and follows the page slower than it scrolls (parallax), then fades as the section leaves.
+ * The canvas is fixed behind the page; the nucleus sits between the two words of the second hero
+ * (the full-screen Orbitarium title) and follows the page slower than it scrolls (parallax). The
+ * galaxy belongs to that hero: it is faded out at the hero's bottom edge (`uClip`) and leaves
+ * with it, so it never shows behind the content of the section below (spec-v4 §3).
  * Nothing in the DOM changes per frame: position, turn and light are uniforms.
  *
  * WebGL rules of the project: only mounted with a real GPU, DPR 1, set up when the browser is
@@ -64,6 +67,8 @@ uniform float uFade;
 uniform float uTime;
 uniform float uSkyShift;
 uniform float uMaxPoint;
+uniform float uClip;
+uniform float uClipFade;
 out vec4 vColor;
 
 void main() {
@@ -89,6 +94,9 @@ void main() {
     // Lights up from the nucleus outwards.
     alpha *= smoothstep(r - 0.05, r + 0.2, uIgnite * 1.25) * uFade;
     if (kind > 1.5) size *= uRadius;
+    // Gone at the bottom edge of the hero (a wide glow is cut by its lower rim, not its centre).
+    float rim = px.y + (kind > 1.5 ? min(size, uMaxPoint) * 0.5 : 0.0);
+    alpha *= 1.0 - smoothstep(uClip - uClipFade, uClip, rim);
   }
   gl_Position = vec4(clip, 0.0, 1.0);
   gl_PointSize = clamp(size, 1.5, uMaxPoint);
@@ -104,7 +112,7 @@ void main() {
   outColor = vColor * texture(uSprite, gl_PointCoord).r;
 }`;
 
-const UNIFORMS = ['uRes', 'uCenter', 'uRadius', 'uAngle', 'uTilt', 'uRoll', 'uIgnite', 'uFade', 'uTime', 'uSkyShift', 'uMaxPoint', 'uSprite'] as const;
+const UNIFORMS = ['uRes', 'uCenter', 'uRadius', 'uAngle', 'uTilt', 'uRoll', 'uIgnite', 'uFade', 'uTime', 'uSkyShift', 'uMaxPoint', 'uClip', 'uClipFade', 'uSprite'] as const;
 type UniformName = (typeof UNIFORMS)[number];
 
 function compile(gl: WebGL2RenderingContext) {
@@ -223,7 +231,7 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
 
       let anchor: SpiralAnchor | null = null;
       let time = 0;
-      // Lights up once: when the road has broken up, or when the title comes into view.
+      // Lights up once: when the first car jumps off the road, or when the title comes into view.
       let ignite = 0;
       let lit = isRoadBroken();
       let raf = 0;
@@ -240,20 +248,21 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(linked.program);
         gl.bindVertexArray(vao);
-        // The nucleus rests between the two words of the title when the title is 40% down the
-        // screen; away from there it follows the page slower than the page moves.
-        const rest = height * 0.4;
-        const titleY = anchor ? anchor.y - sy : height * 3;
+        // The nucleus rests between the two words of the title when the hero fills the screen;
+        // away from there it follows the page slower than the page moves.
+        const coreY = anchor ? spiralCoreY(anchor.y, sy, height, true) - sy : height * 3;
         const bottom = anchor ? anchor.bottom - sy : 0;
         gl.uniform2f(u.uRes, width, height);
-        gl.uniform2f(u.uCenter, anchor ? anchor.x - window.scrollX : width / 2, rest + (titleY - rest) * SPIRAL_FOLLOW);
+        gl.uniform2f(u.uCenter, anchor ? anchor.x - window.scrollX : width / 2, coreY);
         gl.uniform1f(u.uRadius, spiralRadius(width, height, anchor?.gap));
         gl.uniform1f(u.uAngle, (time / SPIRAL_TURN_SECONDS) * Math.PI * 2);
         gl.uniform2f(u.uTilt, Math.cos(SPIRAL_TILT), Math.sin(SPIRAL_TILT));
         gl.uniform2f(u.uRoll, Math.cos(SPIRAL_ROLL), Math.sin(SPIRAL_ROLL));
         gl.uniform1f(u.uIgnite, easeOut(ignite));
-        // Leaves with the Orbitarium section.
+        // Leaves with the hero.
         gl.uniform1f(u.uFade, clamp(bottom / (height * 0.55)));
+        gl.uniform1f(u.uClip, bottom);
+        gl.uniform1f(u.uClipFade, SPIRAL_CLIP_FADE);
         gl.uniform1f(u.uTime, time);
         gl.uniform1f(u.uSkyShift, (sy / Math.max(1, height)) * SKY_DRIFT);
         gl.uniform1f(u.uMaxPoint, maxPoint);

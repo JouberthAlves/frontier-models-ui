@@ -9,7 +9,7 @@
 }
 
 /* The still picture (no real GPU, reduced motion, or the WebGL layer stopped): it belongs to the
-   Orbitarium section and scrolls with it. Placed once by SpiralStill.tsx. */
+   second hero (the full-screen Orbitarium title) and scrolls with it. Placed once by SpiralStill.tsx. */
 .spiral-still {
   position: absolute;
   top: 0;
@@ -19,8 +19,8 @@
   pointer-events: none;
 }
 
-/* Its top edge fades in, so the picture never starts with a cut line. */
+/* Its top and bottom edges fade, so the picture never starts or ends with a cut line. */
 .spiral-still {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 96px);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 96px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 96px, #000 calc(100% - 120px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 96px, #000 calc(100% - 120px), transparent 100%);
 }
