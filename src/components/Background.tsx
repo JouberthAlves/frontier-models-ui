@@ -9,7 +9,8 @@ import './Background.css';
 /**
  * Global background, fixed behind the page: the navy base (behind the racing zone) and the sky
  * of the space (spec-v3 §3): near-black, with the spiral galaxy in WebGL when there is a real
- * GPU and motion is allowed, otherwise a static CSS star field (the still picture of the galaxy
+ * GPU and motion is allowed (past the second hero it explodes into the star field behind the
+ * rest of the space), otherwise a static CSS star field (the still picture of the galaxy
  * is drawn by the Orbitarium section itself, see space/SpiralStill.tsx).
  *
  * The sky is hidden behind the map of the racing zone. RaceMap fades the `[data-race-sky]`

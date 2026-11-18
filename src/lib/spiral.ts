@@ -25,9 +25,16 @@ export const SPIRAL_FOLLOW = 0.6;
 /** Where the nucleus rests on the screen (fraction of the window height): the middle, which is
  *  where the second hero puts it when that hero fills the window. */
 export const SPIRAL_REST = 0.5;
-/** The galaxy belongs to the second hero: it fades out over this many px above the hero's bottom
- *  edge, so it never shows behind the content of the section below. */
-export const SPIRAL_CLIP_FADE = 160;
+/**
+ * The explosion (scroll-driven, reversible): 0 while the second hero fills the window, 1 once the
+ * hero's bottom edge has moved up to `SPIRAL_EXPLODE_END` of the window height. In between, every
+ * particle of the disc leaves for its own place on the screen (`scatter`) and the galaxy becomes
+ * the star field behind the rest of the space.
+ */
+export const SPIRAL_EXPLODE_START = 0.96;
+export const SPIRAL_EXPLODE_END = 0.3;
+export const spiralExplode = (heroBottom: number, viewH: number) =>
+  Math.min(1, Math.max(0, (viewH * SPIRAL_EXPLODE_START - heroBottom) / (viewH * (SPIRAL_EXPLODE_START - SPIRAL_EXPLODE_END))));
 
 /**
  * Document y of the nucleus when the page is scrolled to `scrollY`. With the WebGL layer (`live`)
@@ -40,6 +47,11 @@ export const spiralCoreY = (anchorY: number, scrollY: number, viewH: number, liv
 };
 
 const SEED = 20261118;
+/** Its own sequence, so the scatter targets do not change the picture of the galaxy. */
+const SCATTER_SEED = 0x5ca77e41;
+/** How often a particle takes, of two random places, the one on its own side of the nucleus:
+ *  enough for the scatter to read as an explosion, and the screen is still covered evenly. */
+const SCATTER_OUTWARD = 0.7;
 /** How tightly the arms wind: angle gained per unit of ln(radius). */
 const WIND = 3.1;
 const ARM_START = 0.06;
@@ -67,6 +79,9 @@ export interface SpiralData {
   meta: Float32Array;
   /** r, g, b (0..1). */
   color: Float32Array;
+  /** Disc particles only: where the particle rests after the explosion (x, y in 0..1 of the
+   *  screen, y down) and its depth (0 far .. 1 near: light, drift and parallax). */
+  scatter: Float32Array;
 }
 
 export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralData {
@@ -76,6 +91,7 @@ export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralDa
   const pos = new Float32Array(count * 3);
   const meta = new Float32Array(count * 4);
   const color = new Float32Array(count * 3);
+  const scatter = new Float32Array(count * 3);
   let n = 0;
   const put = (x: number, y: number, z: number, size: number, bright: number, kind: number, rgb: readonly number[]) => {
     pos.set([x, y, z], n * 3);
@@ -139,7 +155,25 @@ export function buildSpiral(points: number, stars: number = SKY_STARS): SpiralDa
   put(0, 0, 0, 0.2, 0.32, KIND_CORE, WARM_WHITE);
   put(0, 0, 0, 0.08, 0.75, KIND_CORE, WHITE);
 
-  return { count, pos, meta, color };
+  // Where each particle of the disc goes when the galaxy explodes: a random place on the screen,
+  // more often on the side of the nucleus the particle is already on.
+  const srng = mulberry32(SCATTER_SEED ^ Math.imul(points, 0x9e3779b1));
+  for (let i = 0; i < count; i += 1) {
+    if (meta[i * 4 + 3] !== KIND_DISC) continue;
+    const [dx, dy] = projectSpiral(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], 0);
+    let x = srng();
+    let y = srng();
+    const x2 = srng();
+    const y2 = srng();
+    const outward = srng() < SCATTER_OUTWARD;
+    if (outward && (x2 - 0.5) * dx + (y2 - 0.5) * dy > (x - 0.5) * dx + (y - 0.5) * dy) {
+      x = x2;
+      y = y2;
+    }
+    scatter.set([x, y, srng()], i * 3);
+  }
+
+  return { count, pos, meta, color, scatter };
 }
 
 /** Radius of the disc on screen: it fills the gap between the two words of the title (a little
@@ -163,7 +197,7 @@ export interface SpiralAnchor {
   /** Where the nucleus sits, in document coordinates: between the two words of the title. */
   x: number;
   y: number;
-  /** Bottom of the second hero (the full-screen title): the galaxy leaves with it. */
+  /** Bottom of the second hero (the full-screen title): the galaxy explodes as it leaves. */
   bottom: number;
   /** Free width between the two words of the title (0 when they are stacked). */
   gap: number;

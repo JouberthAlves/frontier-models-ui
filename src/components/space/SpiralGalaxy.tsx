@@ -5,12 +5,12 @@ import { observeReveal } from '../../lib/reveal';
 import {
   buildSpiral,
   measureSpiralAnchor,
-  SPIRAL_CLIP_FADE,
   SPIRAL_IGNITE_MS,
   SPIRAL_ROLL,
   SPIRAL_TILT,
   SPIRAL_TURN_SECONDS,
   spiralCoreY,
+  spiralExplode,
   spiralRadius,
   type SpiralAnchor
 } from '../../lib/spiral';
@@ -22,10 +22,15 @@ import './SpiralGalaxy.css';
  * the disc, its nucleus and the loose stars of the sky.
  *
  * The canvas is fixed behind the page; the nucleus sits between the two words of the second hero
- * (the full-screen Orbitarium title) and follows the page slower than it scrolls (parallax). The
- * galaxy belongs to that hero: it is faded out at the hero's bottom edge (`uClip`) and leaves
- * with it, so it never shows behind the content of the section below (spec-v4 §3).
- * Nothing in the DOM changes per frame: position, turn and light are uniforms.
+ * (the full-screen Orbitarium title) and follows the page slower than it scrolls (parallax).
+ *
+ * When that hero leaves the screen the galaxy explodes (`uExplode`, a function of the scroll
+ * position, so scrolling back puts it together again): every particle of the disc bursts away
+ * from the nucleus and settles at its own place on the screen, smaller and dimmer, and from
+ * there on the particles are the star field behind the rest of the space (drifting slowly,
+ * twinkling, with a little parallax). Nothing is clipped: the canvas covers the whole window.
+ * Nothing in the DOM changes per frame and no particle is touched in JS: position, turn, light
+ * and the explosion are uniforms, the motion is in the vertex shader.
  *
  * WebGL rules of the project: only mounted with a real GPU, DPR 1, set up when the browser is
  * idle, frame rate capped at 30 per second on touch, a watchdog (5 frames in a row over 120 ms) that stops it for good,
@@ -56,6 +61,7 @@ precision highp float;
 in vec3 aPos;
 in vec4 aMeta;
 in vec3 aColor;
+in vec3 aScatter;
 uniform vec2 uRes;
 uniform vec2 uCenter;
 uniform float uRadius;
@@ -63,12 +69,10 @@ uniform float uAngle;
 uniform vec2 uTilt;
 uniform vec2 uRoll;
 uniform float uIgnite;
-uniform float uFade;
+uniform float uExplode;
 uniform float uTime;
 uniform float uSkyShift;
 uniform float uMaxPoint;
-uniform float uClip;
-uniform float uClipFade;
 out vec4 vColor;
 
 void main() {
@@ -76,6 +80,7 @@ void main() {
   float size = aMeta.x;
   float alpha = aMeta.y;
   vec2 clip;
+  float settle = 0.0;
   if (kind > 0.5 && kind < 1.5) {
     // Loose star: a place on the screen, drifting a little with the page, twinkling slowly.
     vec2 uv = vec2(aPos.x, fract(aPos.y + uSkyShift * aPos.z));
@@ -90,16 +95,41 @@ void main() {
     vec2 d = vec2(q.x, q.y * uTilt.x + aPos.z * uTilt.y);
     d = vec2(d.x * uRoll.x - d.y * uRoll.y, d.x * uRoll.y + d.y * uRoll.x);
     vec2 px = uCenter + d * uRadius;
-    clip = vec2(px.x / uRes.x * 2.0 - 1.0, 1.0 - px.y / uRes.y * 2.0);
     // Lights up from the nucleus outwards.
-    alpha *= smoothstep(r - 0.05, r + 0.2, uIgnite * 1.25) * uFade;
-    if (kind > 1.5) size *= uRadius;
-    // Gone at the bottom edge of the hero (a wide glow is cut by its lower rim, not its centre).
-    float rim = px.y + (kind > 1.5 ? min(size, uMaxPoint) * 0.5 : 0.0);
-    alpha *= 1.0 - smoothstep(uClip - uClipFade, uClip, rim);
+    alpha *= smoothstep(r - 0.05, r + 0.2, uIgnite * 1.25);
+    if (kind > 1.5) {
+      // Glow of the nucleus: a brief soft flash as the explosion starts, then gone.
+      float flash = smoothstep(0.0, 0.1, uExplode) * (1.0 - smoothstep(0.1, 0.28, uExplode));
+      float left = 1.0 - uExplode;
+      left *= left;
+      alpha *= left * left * (1.0 + 1.4 * flash);
+      size *= uRadius * (1.0 + 0.5 * flash);
+    } else {
+      float rnd = fract(aMeta.z * 0.159155);
+      float depth = aScatter.z;
+      // Each particle leaves a little after the one before (not all at once), on a steep ease-out.
+      float t = clamp((uExplode - 0.18 * rnd) / 0.82, 0.0, 1.0);
+      float inv = 1.0 - t;
+      inv *= inv;
+      settle = 1.0 - inv * inv;
+      // First a short burst straight away from the nucleus...
+      float burst = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.12, 0.7, t));
+      vec2 away = d / max(length(d), 0.0001);
+      px += away * uRadius * burst * (0.25 + 0.55 * depth);
+      // ...then its own place on the screen: drifting slowly, a little slower than the page.
+      float sy = fract(aScatter.y - uSkyShift * (0.5 + 2.0 * depth));
+      vec2 rest = vec2(aScatter.x, sy * 1.08 - 0.04) * uRes;
+      rest += vec2(sin(uTime * 0.3 + aMeta.z), cos(uTime * 0.27 + aMeta.z * 1.7)) * (2.0 + 4.0 * depth);
+      px = mix(px, rest, settle);
+      // A fine star field: smaller, dimmer (the far ones more), twinkling.
+      size = mix(size, max(1.0, size * 0.55), settle);
+      float star = 0.45 * mix(0.3, 1.0, depth * depth) * (0.8 + 0.2 * sin(uTime * (0.4 + depth) + aMeta.z));
+      alpha *= mix(1.0, star, settle);
+    }
+    clip = vec2(px.x / uRes.x * 2.0 - 1.0, 1.0 - px.y / uRes.y * 2.0);
   }
   gl_Position = vec4(clip, 0.0, 1.0);
-  gl_PointSize = clamp(size, 1.5, uMaxPoint);
+  gl_PointSize = clamp(size, mix(1.5, 1.0, settle), uMaxPoint);
   vColor = vec4(aColor * alpha, alpha);
 }`;
 
@@ -112,7 +142,7 @@ void main() {
   outColor = vColor * texture(uSprite, gl_PointCoord).r;
 }`;
 
-const UNIFORMS = ['uRes', 'uCenter', 'uRadius', 'uAngle', 'uTilt', 'uRoll', 'uIgnite', 'uFade', 'uTime', 'uSkyShift', 'uMaxPoint', 'uClip', 'uClipFade', 'uSprite'] as const;
+const UNIFORMS = ['uRes', 'uCenter', 'uRadius', 'uAngle', 'uTilt', 'uRoll', 'uIgnite', 'uExplode', 'uTime', 'uSkyShift', 'uMaxPoint', 'uSprite'] as const;
 type UniformName = (typeof UNIFORMS)[number];
 
 function compile(gl: WebGL2RenderingContext) {
@@ -129,6 +159,7 @@ function compile(gl: WebGL2RenderingContext) {
   gl.bindAttribLocation(program, 0, 'aPos');
   gl.bindAttribLocation(program, 1, 'aMeta');
   gl.bindAttribLocation(program, 2, 'aColor');
+  gl.bindAttribLocation(program, 3, 'aScatter');
   gl.linkProgram(program);
   gl.deleteShader(vertex);
   gl.deleteShader(fragment);
@@ -157,7 +188,6 @@ function glowTexture(): Uint8Array {
   return data;
 }
 
-const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
 export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false, onReady, onFail }: SpiralGalaxyProps) {
@@ -200,7 +230,7 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
       const data = buildSpiral(points);
       const vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
-      const buffers = [data.pos, data.meta, data.color].map((array, index) => {
+      const buffers = [data.pos, data.meta, data.color, data.scatter].map((array, index) => {
         const buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
@@ -240,6 +270,9 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
       let slowFrames = 0;
       let stopped = false;
 
+      // 0 while the second hero fills the window, 1 once it has left (see lib/spiral.ts).
+      const explode = () => (anchor ? spiralExplode(anchor.bottom - window.scrollY, canvas.height) : 0);
+
       const render = () => {
         const width = canvas.width;
         const height = canvas.height;
@@ -251,7 +284,6 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
         // The nucleus rests between the two words of the title when the hero fills the screen;
         // away from there it follows the page slower than the page moves.
         const coreY = anchor ? spiralCoreY(anchor.y, sy, height, true) - sy : height * 3;
-        const bottom = anchor ? anchor.bottom - sy : 0;
         gl.uniform2f(u.uRes, width, height);
         gl.uniform2f(u.uCenter, anchor ? anchor.x - window.scrollX : width / 2, coreY);
         gl.uniform1f(u.uRadius, spiralRadius(width, height, anchor?.gap));
@@ -259,10 +291,8 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
         gl.uniform2f(u.uTilt, Math.cos(SPIRAL_TILT), Math.sin(SPIRAL_TILT));
         gl.uniform2f(u.uRoll, Math.cos(SPIRAL_ROLL), Math.sin(SPIRAL_ROLL));
         gl.uniform1f(u.uIgnite, easeOut(ignite));
-        // Leaves with the hero.
-        gl.uniform1f(u.uFade, clamp(bottom / (height * 0.55)));
-        gl.uniform1f(u.uClip, bottom);
-        gl.uniform1f(u.uClipFade, SPIRAL_CLIP_FADE);
+        // Explodes as the hero leaves; the particles stay as the star field of the space.
+        gl.uniform1f(u.uExplode, explode());
         gl.uniform1f(u.uTime, time);
         gl.uniform1f(u.uSkyShift, (sy / Math.max(1, height)) * SKY_DRIFT);
         gl.uniform1f(u.uMaxPoint, maxPoint);
@@ -294,6 +324,8 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
           const dt = lastRender ? Math.min(0.05, Math.max(0.0005, (now - lastRender) / 1000)) : 1 / 60;
           lastRender = now;
           time += dt;
+          // Arriving below the hero without having seen it (a reload half-way down the page).
+          if (!lit && explode() > 0) lit = true;
           if (lit && ignite < 1) ignite = Math.min(1, ignite + (dt * 1000) / SPIRAL_IGNITE_MS);
           render();
         }

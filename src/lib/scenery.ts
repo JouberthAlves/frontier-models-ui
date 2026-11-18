@@ -133,46 +133,46 @@ const ZONES: Zone[] = [
   {
     until: 0.22,
     big: [['oak', 14], ['grove-b', 28], ['grove-c', 18], ['palms-a', 18], ['grove-a', 28]],
-    bigGap: 58,
-    small: [['tree', 26], ['tree2', 20], ['palm', 16], ['bush', 12], ['bushes', 8], ['rock', 10], ['flowers', 8]],
-    smallGap: 96,
+    bigGap: 130,
+    small: [['tree', 26], ['tree2', 20], ['palm', 16], ['bush', 4], ['bushes', 2], ['rock', 10], ['flowers', 2]],
+    smallGap: 180,
     pack: 0.96
   },
   // Cliff and fields
   {
     until: 0.42,
     big: [['oak', 20], ['grove-a', 38], ['grove-b', 26], ['grove-c', 16], ['woods-c', 8]],
-    bigGap: 54,
-    small: [['tree', 30], ['tree2', 24], ['bush', 10], ['bushes', 8], ['rock', 8], ['rock2', 8], ['flowers', 8], ['pine', 6]],
-    smallGap: 96,
+    bigGap: 124,
+    small: [['tree', 30], ['tree2', 24], ['bush', 3], ['bushes', 2], ['rock', 8], ['rock2', 8], ['flowers', 2], ['pine', 6]],
+    smallGap: 180,
     pack: 0.94
   },
   // Around the village
   {
     until: 0.66,
     big: [['oak', 18], ['grove-a', 34], ['grove-b', 28], ['grove-c', 20], ['woods-c', 8]],
-    bigGap: 56,
+    bigGap: 128,
     // No houses here: they only stand in the village and on its outskirts.
-    small: [['tree', 30], ['tree2', 24], ['bush', 10], ['bushes', 8], ['flowers', 18], ['rock', 6], ['pine', 4]],
-    smallGap: 96,
+    small: [['tree', 30], ['tree2', 24], ['bush', 3], ['bushes', 2], ['flowers', 4], ['rock', 6], ['pine', 4]],
+    smallGap: 180,
     pack: 0.94
   },
   // Woods: almost fully covered by canopy
   {
     until: 0.9,
     big: [['oak-d', 16], ['woods-a', 50], ['woods-b', 28], ['woods-c', 10]],
-    bigGap: 30,
+    bigGap: 58,
     small: [['dense', 44], ['pine', 22], ['pine2', 16], ['tree2', 12], ['bushes', 6]],
-    smallGap: 44,
+    smallGap: 84,
     pack: 0.62
   },
   // Finish
   {
     until: 2,
     big: [['oak-d', 20], ['woods-c', 42], ['grove-c', 42]],
-    bigGap: 110,
-    small: [['bushes', 40], ['pine', 16], ['pine2', 14], ['tree2', 30]],
-    smallGap: 104,
+    bigGap: 160,
+    small: [['bushes', 8], ['pine', 16], ['pine2', 14], ['tree2', 30]],
+    smallGap: 180,
     pack: 1.1
   }
 ];
@@ -859,7 +859,7 @@ export function buildScenery(input: SceneryInput): Scenery {
       houses += 1;
     }
     // Trees, bushes, flower beds and short hedges in the lots between them.
-    const lotMix: Mix = [['hedge', 20], ['flowers', 22], ['tree2', 24], ['bush', 14], ['bushes', 12], ['tree', 8]];
+    const lotMix: Mix = [['hedge', 10], ['flowers', 6], ['tree2', 24], ['bush', 4], ['bushes', 3], ['tree', 10]];
     let lots = 0;
     for (let i = 0; i < 260 && lots < Math.round(houses * 0.6) + 3; i += 1) {
       const x = cx + (vr() * 2 - 1) * hw;
@@ -937,7 +937,8 @@ export function buildScenery(input: SceneryInput): Scenery {
     const offset = roadW / 2 + 8 + deep / 2;
     const first = track.gridLead + 110;
     const room = track.lenAtY(breakY - 40) - first - 300;
-    const count = room > 300 ? clamp(Math.round(room / 560), 2, 8) : 0;
+    // No hedges along the road (owner, 2026-11-18): they read as glued to the kerb.
+    const count = 0 * (room > 300 ? clamp(Math.round(room / 1100), 1, 4) : 0);
     for (let i = 0; i < count; i += 1) {
       const start = first + ((i + rng() * 0.7) / count) * room;
       const length = 120 + rng() * 170;
