@@ -1,5 +1,4 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
-import SectionTitle from './SectionTitle';
 import ExternalLink from './ExternalLink';
 import { useI18n } from '../i18n/i18n';
 import type { Dict } from '../i18n/pt';
@@ -42,6 +41,7 @@ export default function Prompts() {
   const [active, setActive] = useState<string>(`racing:${archive.benchmarks.racing.currentPrompt ?? 'racing-v3.4'}`);
   const tabRefs = useRef(new Map<string, HTMLButtonElement | null>());
   const reveal = useReveal<HTMLDivElement>();
+  const headReveal = useReveal<HTMLElement>();
 
   const tabs: Record<Benchmark, TabDef[]> = {
     racing: archive.benchmarks.racing.prompts.map(prompt => ({ benchmark: 'racing', prompt })),
@@ -69,10 +69,12 @@ export default function Prompts() {
   };
 
   return (
-    <section id="prompts" className="section prompts" aria-labelledby="prompts-title">
+    <section id="prompts" className="section prompts space" aria-labelledby="prompts-title">
       <div className="shell">
-        <header className="section__head">
-          <SectionTitle id="prompts-title" text={t.prompts.title} strokeColor="var(--ink-2)" />
+        <header ref={headReveal} className="section__head">
+          <h2 id="prompts-title" className="space-title reveal-item">
+            {t.prompts.title}
+          </h2>
         </header>
 
         <div ref={reveal} className="prompts__body">
@@ -169,10 +171,7 @@ export default function Prompts() {
                 )}
               </div>
 
-              <ExternalLink
-                className={`link ${benchmark === 'racing' ? 'link--warm' : 'link--cool'}`}
-                href={promptUrl(benchmark, prompt.path)}
-              >
+              <ExternalLink className="pill pill--glass" href={promptUrl(benchmark, prompt.path)}>
                 {t.prompts.read}
               </ExternalLink>
             </div>

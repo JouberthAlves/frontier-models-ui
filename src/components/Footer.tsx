@@ -9,7 +9,7 @@ export default function Footer() {
   const reveal = useReveal<HTMLElement>();
 
   return (
-    <footer ref={reveal} className="footer">
+    <footer ref={reveal} className="footer space">
       <span className="footer__seam" aria-hidden="true" />
       <div className="shell footer__inner">
         <p className="footer__about">{t.footer.about}</p>

@@ -12,50 +12,38 @@
  * scenery.ts turns all of them into one shared path under the pieces (no filter, no extra
  * element per piece, and the shadow never turns with the piece).
  *
- * Add a sprite: put it on a sheet, cut it (see AGENTS.md), add its pixel size to `SPRITES`, a
- * piece to `SINGLES` (and to `PieceId`), and list the piece in a zone of `ZONES`
- * (src/lib/scenery.ts). `SCENERY_DEF_ELEMENTS` and `FOOT` are computed from this data.
+ * Add a sprite: put it on a sheet, cut it (see AGENTS.md; its pixel size comes from the manifest
+ * the cut writes), add a piece to `SINGLES` (and to `PieceId`), and list the piece in a zone of
+ * `ZONES` (src/lib/scenery.ts). `SCENERY_DEF_ELEMENTS` and `FOOT` are computed from this data.
  */
+import manifest from '../../public/map/manifest.json';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 export const mapAsset = (name: string) => `${BASE}/map/${name}.webp`;
 
-/** Pixel size of each sprite, as in public/map/manifest.json. */
-export const SPRITES = {
-  'tree-round': [255, 256],
-  'tree-round-dark': [255, 256],
-  oak: [256, 243],
-  bush: [256, 254],
-  palm: [238, 256],
-  'palm-2': [255, 256],
-  pine: [197, 256],
-  'pine-2': [256, 206],
-  bushes: [256, 234],
-  hedge: [256, 114],
-  flowers: [256, 183],
-  rocks: [256, 179],
-  house: [227, 256],
-  'house-square': [223, 256],
-  'house-l': [215, 256],
-  'house-long': [216, 256],
-  church: [139, 256],
-  'umbrella-coral': [256, 256],
-  'umbrella-teal': [256, 255],
-  sailboat: [120, 256],
-  rowboat: [114, 256],
-  bridge: [256, 243],
-  stand: [256, 230],
-  fence: [256, 115]
-} as const satisfies Record<string, readonly [number, number]>;
+type Manifest = typeof manifest;
+type ManifestName = keyof Manifest;
+/** The seamless ground tiles are the manifest entries marked `tile`; everything else is a sprite. */
+type TextureName = { [K in ManifestName]: Manifest[K] extends { tile: boolean } ? K : never }[ManifestName];
+export type SpriteName = Exclude<ManifestName, TextureName>;
 
-export type SpriteName = keyof typeof SPRITES;
+const MANIFEST: Record<string, { w: number; h: number; tile?: boolean }> = manifest;
+const names = Object.keys(MANIFEST);
 
-/** Seamless 512 px ground tiles. */
-export const TEXTURES = ['grass', 'sand', 'sea'] as const;
-export const TEXTURE_SIZE = 512;
+/**
+ * Pixel size of each sprite, read from public/map/manifest.json (written by the cut script):
+ * a re-cut never needs a number copied here.
+ */
+export const SPRITES = Object.fromEntries(
+  names.filter(name => !MANIFEST[name].tile).map(name => [name, [MANIFEST[name].w, MANIFEST[name].h]])
+) as unknown as Record<SpriteName, readonly [number, number]>;
+
+/** Seamless ground tiles. */
+export const TEXTURES = names.filter(name => MANIFEST[name].tile);
+export const TEXTURE_SIZE = MANIFEST[TEXTURES[0]]?.w ?? 512;
 
 /** Every file the map draws: the loader waits for them (step "map"). */
-export const MAP_ASSET_URLS: string[] = [...TEXTURES, ...(Object.keys(SPRITES) as SpriteName[])].map(mapAsset);
+export const MAP_ASSET_URLS: string[] = names.map(mapAsset);
 
 export type PieceId =
   | 'palm'
@@ -113,9 +101,11 @@ export interface KitSymbol {
  * How a piece meets the ground (its shadow):
  *  - `crown`: a canopy or parasol seen from above, the shadow peeks out below and to the right;
  *  - `building`: 3/4 view with the front wall at the bottom, the shadow lies along its base;
- *  - `low`: flat on the ground (flowers, rocks, fence, boats), a thin contact shadow.
+ *  - `low`: flat on the ground (flowers, rocks, fence, boats), a thin contact shadow;
+ *  - `palm`: see-through fronds around a thin trunk: a small shadow under the middle only (a
+ *    crown-sized one shows through the fronds as a grey disc).
  */
-type Ground = 'crown' | 'building' | 'low';
+type Ground = 'crown' | 'building' | 'low' | 'palm';
 
 interface Single {
   id: PieceId;
@@ -127,18 +117,20 @@ interface Single {
   flip?: boolean;
 }
 
+// Widths are for the sprites as cut today: the re-cut trimmed the empty margins of pine-2 and
+// rocks, so their widths went down to keep the same size on the map.
 const SINGLES: Single[] = [
   /* ---------- trees ---------- */
   { id: 'tree', sprite: 'tree-round', w: 56, ground: 'crown' },
   { id: 'tree2', sprite: 'oak', w: 48, ground: 'crown' },
   { id: 'dense', sprite: 'tree-round-dark', w: 58, ground: 'crown' },
   { id: 'pine', sprite: 'pine', w: 46, ground: 'crown' },
-  { id: 'pine2', sprite: 'pine-2', w: 54, ground: 'crown' },
+  { id: 'pine2', sprite: 'pine-2', w: 42, ground: 'crown' },
   // Landmark trees: one wide crown.
   { id: 'oak', sprite: 'oak', w: 66, ground: 'crown' },
   { id: 'oak-d', sprite: 'tree-round-dark', w: 70, ground: 'crown' },
-  { id: 'palm', sprite: 'palm', w: 58, ground: 'crown' },
-  { id: 'palm2', sprite: 'palm-2', w: 54, ground: 'crown' },
+  { id: 'palm', sprite: 'palm', w: 58, ground: 'palm' },
+  { id: 'palm2', sprite: 'palm-2', w: 54, ground: 'palm' },
   { id: 'bush', sprite: 'bush', w: 28, ground: 'crown' },
   { id: 'bushes', sprite: 'bushes', w: 44, ground: 'crown' },
   { id: 'hedge', sprite: 'hedge', w: 44, ground: 'low' },
@@ -151,8 +143,8 @@ const SINGLES: Single[] = [
   { id: 'church', sprite: 'church', w: 37, ground: 'building' },
 
   /* ---------- small things ---------- */
-  { id: 'rock', sprite: 'rocks', w: 24, ground: 'low' },
-  { id: 'rock2', sprite: 'rocks', w: 32, ground: 'low', flip: true },
+  { id: 'rock', sprite: 'rocks', w: 19, ground: 'low' },
+  { id: 'rock2', sprite: 'rocks', w: 25, ground: 'low', flip: true },
   { id: 'umbrella', sprite: 'umbrella-coral', w: 30, ground: 'crown' },
   { id: 'umbrella2', sprite: 'umbrella-teal', w: 28, ground: 'crown' },
   { id: 'boat', sprite: 'sailboat', w: 20, ground: 'low' },
@@ -305,6 +297,7 @@ function groundOf(single: Single, scale = 1, x = 0, y = 0, turn = 0): GroundPart
   const w = single.w * scale;
   const h = heightOf(single) * scale;
   if (single.ground === 'building') return { x, y, rx: w * 0.53, ry: h * 0.25, dx: w * 0.05, dy: h * 0.31, turn };
+  if (single.ground === 'palm') return { x, y, rx: w * 0.25, ry: h * 0.22, dx: w * 0.07, dy: h * 0.11, turn };
   if (single.ground === 'low') return { x, y, rx: w * 0.5, ry: h * 0.47, dx: w * 0.03, dy: h * 0.09, turn };
   return { x, y, rx: w * 0.46, ry: h * 0.45, dx: w * 0.07, dy: h * 0.11, turn };
 }

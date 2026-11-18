@@ -54,10 +54,27 @@
   --link-warm: #b4581b;
   --scene-active: #e07b3c;
 
+  /* v3 space (spec-v3 §3.1): near-black, white ink, hairlines and pills. Scoped by `.space`
+     (global.css), which also re-points --ink / --line there.
+     Contrast on --sp-bg: --sp-ink-2 7.5:1, --sp-ink-3 5.4:1 (the spec's .42 gave 3.9:1, so .52). */
+  --sp-bg: #030406;
+  --sp-bg-2: #06080d;
+  --sp-ink: #fafafa;
+  --sp-ink-2: rgba(250, 250, 250, 0.62);
+  --sp-ink-3: rgba(250, 250, 250, 0.52);
+  --sp-line: rgba(255, 255, 255, 0.12);
+  --sp-pill: rgba(255, 255, 255, 0.12);
+  --sp-pill-hover: rgba(255, 255, 255, 0.18);
+  --sp-pill-solid: #fafafa;
+  --sp-pill-solid-ink: #0a0a0a;
+  --sp-row: rgba(255, 255, 255, 0.04);
+
   /* type */
   --f-display: 'Anybody', 'Arial Narrow', sans-serif;
   --f-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
   --f-data: 'Red Hat Mono', ui-monospace, monospace;
+  /* The space only: a clean neo-grotesque at weight 500 with tight tracking. */
+  --f-space: 'Geist', 'Inter Tight', 'Helvetica Neue', Arial, sans-serif;
 
   /* motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

@@ -1,6 +1,6 @@
 /*
  * Adapted from React Bits: https://github.com/DavidHDev/react-bits/blob/main/src/ts-default/TextAnimations/DecryptedText/DecryptedText.tsx
- * Changes for Frontier Models UI: no motion dependency; plays only when the text changes after mount (language switch); sequential reveal; layout-stable cells; timer fallback; animateOn="hover" mode for model names (scramble and resolve left to right in the model color).
+ * Changes for Frontier Models UI: no motion dependency; plays only when the text changes after mount (language switch); sequential reveal; layout-stable cells; timer fallback; animateOn="hover" mode for model names (scramble and resolve left to right in the model color); animateOn="view" mode (plays once when the text enters the screen).
  *
  * MIT + Commons Clause License Condition v1.0
  *
@@ -29,6 +29,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useReducedMotion } from '../../lib/motion';
+import { observeReveal } from '../../lib/reveal';
 import { useScramble } from '../../lib/scramble';
 import './DecryptedText.css';
 
@@ -42,8 +43,11 @@ export interface DecryptedTextProps {
   revealDirection?: 'start' | 'end';
   characters?: string;
   className?: string;
-  /** "change" (default): plays when the text changes. "hover": plays on mouse enter / playKey. */
-  animateOn?: 'change' | 'hover';
+  /**
+   * "change" (default): plays when the text changes. "hover": plays on mouse enter / playKey.
+   * "view": plays once, when the text enters the screen.
+   */
+  animateOn?: 'change' | 'hover' | 'view';
   /** Hover mode: bump it to play from outside (card hover, keyboard focus). */
   playKey?: number;
   /** Hover mode: color of the scrambled glyphs (model identity color). */
@@ -130,6 +134,33 @@ function HoverDecrypt({ text, speed = 35, className = '', playKey, tone, onCream
         if (event.pointerType === 'mouse') play();
       }}
     >
+      {shown ? renderCells(text, shown) : text}
+    </span>
+  );
+}
+
+/**
+ * View mode (spec-v3 §3.2): the letters scramble and resolve from left to right once, when the
+ * text enters the screen, on any device. Same cells as the hover mode: the width never moves.
+ */
+function ViewDecrypt({ text, speed = 35, className = '', tone }: DecryptedTextProps) {
+  const { shown, play } = useScramble(text, speed);
+  const ref = useRef<HTMLSpanElement>(null);
+  const played = useRef(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || played.current) return undefined;
+    return observeReveal(element, () => {
+      played.current = true;
+      play(true);
+    });
+  }, [play]);
+
+  const style = tone ? ({ '--decrypt-color': tone, '--decrypt-opacity': 1 } as CSSProperties) : undefined;
+
+  return (
+    <span ref={ref} className={`decrypted-text ${className}`.trim()} style={style}>
       {shown ? renderCells(text, shown) : text}
     </span>
   );
@@ -223,6 +254,6 @@ const ChangeDecrypt = ({
 };
 
 const DecryptedText = (props: DecryptedTextProps) =>
-  props.animateOn === 'hover' ? <HoverDecrypt {...props} /> : <ChangeDecrypt {...props} />;
+  props.animateOn === 'hover' ? <HoverDecrypt {...props} /> : props.animateOn === 'view' ? <ViewDecrypt {...props} /> : <ChangeDecrypt {...props} />;
 
 export default DecryptedText;

@@ -252,6 +252,113 @@ a {
   }
 }
 
+/* ---------- the space (spec-v3 §3): Orbitarium, Prompts, Archive, footer ---------- */
+/* Like .race-card, the scope re-points the shared tokens: everything inside reads white on
+   near-black, in the space font, with hairlines instead of boxes. */
+.space {
+  --ink: var(--sp-ink);
+  --ink-2: var(--sp-ink-2);
+  --ink-3: var(--sp-ink-3);
+  --line: var(--sp-line);
+  --line-cool: var(--sp-line);
+  --cool: var(--sp-ink);
+  --warm: var(--sp-ink);
+  --bg-0: var(--sp-bg);
+  color: var(--sp-ink);
+  font-family: var(--f-space);
+  letter-spacing: -0.005em;
+}
+
+.space :focus-visible {
+  outline-color: var(--sp-ink);
+}
+
+.space .lede {
+  color: var(--sp-ink-2);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.space .link {
+  font-weight: 500;
+}
+
+/* Section title of the space: weight 500, tight tracking (the wide Anybody stays in the race). */
+.space-title {
+  font-family: var(--f-space);
+  font-size: clamp(36px, 5.2vw, 68px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* Pills: solid white for the main action, translucent for the rest. The hover is an overlay
+   whose opacity changes (no color animation). */
+.pill {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--r-chip);
+  overflow: hidden;
+  font-family: var(--f-space);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: transform var(--t-micro) var(--ease-out);
+}
+
+.pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #fff;
+  opacity: 0;
+  transition: opacity var(--t-short) ease;
+}
+
+.pill:active {
+  transform: scale(0.98);
+}
+
+.pill--solid {
+  background: var(--sp-pill-solid);
+  color: var(--sp-pill-solid-ink);
+}
+
+.pill--solid::before {
+  background: #000;
+}
+
+.pill--solid:hover::before {
+  opacity: 0.1;
+}
+
+.pill--glass {
+  background: var(--sp-pill);
+  color: var(--sp-ink);
+}
+
+/* 12% + this overlay = the 18% of --sp-pill-hover. */
+.pill--glass:hover::before {
+  opacity: 0.07;
+}
+
+.space .chip {
+  border: 0;
+  background: var(--sp-pill);
+  color: var(--sp-ink);
+}
+
 /* ---------- links: underline that draws ---------- */
 .link {
   position: relative;

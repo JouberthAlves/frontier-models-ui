@@ -132,7 +132,7 @@ export const pt = {
       'Frontier Models é um arquivo independente de benchmarks. Os nomes dos modelos identificam os sistemas usados em cada execução.',
     repo: 'Repositório do arquivo',
     methodology: 'Metodologia',
-    credit: 'Fundo e efeitos de texto adaptados do React Bits, de David Haz (MIT + Commons Clause).',
+    credit: 'Efeitos de texto adaptados do React Bits, de David Haz (MIT + Commons Clause).',
     links: 'Links do arquivo'
   },
   loader: {

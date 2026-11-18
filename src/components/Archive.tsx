@@ -1,6 +1,5 @@
 import DecryptedText from './bits/DecryptedText';
 import { useState, type FocusEvent } from 'react';
-import SectionTitle from './SectionTitle';
 import ExternalLink from './ExternalLink';
 import { useI18n } from '../i18n/i18n';
 import type { Dict } from '../i18n/pt';
@@ -16,8 +15,8 @@ const BENCHES: Benchmark[] = ['racing', 'orbitarium'];
 const BENCH_NAME: Record<Benchmark, string> = { racing: 'Racing', orbitarium: 'Orbitarium' };
 
 function CategoryChip({ run, t }: { run: Run; t: Dict }) {
-  const tone = run.category === 'current' ? (run.benchmark === 'racing' ? 'warm' : 'cool') : 'plain';
-  return <span className={`cat-chip cat-chip--${tone}`}>{t.archive.categories[run.category]}</span>;
+  // Translucent pill; the current runs get the solid white one.
+  return <span className={`cat-chip${run.category === 'current' ? ' cat-chip--solid' : ''}`}>{t.archive.categories[run.category]}</span>;
 }
 
 function SiteCell({ run, t }: { run: Run; t: Dict }) {
@@ -58,6 +57,7 @@ export default function Archive() {
     if (isKeyboardFocus(event.target)) setNameKeys(keys => ({ ...keys, [key]: (keys[key] ?? 0) + 1 }));
   };
   const tableReveal = useReveal<HTMLDivElement>();
+  const headReveal = useReveal<HTMLElement>();
   const listReveal = useReveal<HTMLUListElement>();
 
   const rows = archiveOrder.filter(
@@ -65,10 +65,12 @@ export default function Archive() {
   );
 
   return (
-    <section id="archive" className="section archive" aria-labelledby="archive-title">
+    <section id="archive" className="section archive space" aria-labelledby="archive-title">
       <div className="shell">
-        <header className="section__head">
-          <SectionTitle id="archive-title" text={t.archive.title} strokeColor="var(--cool)" />
+        <header ref={headReveal} className="section__head">
+          <h2 id="archive-title" className="space-title reveal-item">
+            {t.archive.title}
+          </h2>
         </header>
 
         <div className="archive__filters">

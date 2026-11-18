@@ -1,3 +1,5 @@
+/* Space look (spec-v3 §3.1): translucent pills for the tabs (the active one solid white), a panel
+   with a hairline above and below instead of a box. */
 .prompts__body {
   display: grid;
   gap: 20px;
@@ -5,22 +7,15 @@
 
 .prompts__group {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .prompts__group-label {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  color: var(--sp-ink-3);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.prompts__group-label--racing {
-  color: var(--warm-soft);
-}
-
-.prompts__group-label--orbitarium {
-  color: var(--cyan);
 }
 
 .prompts__tabs {
@@ -33,67 +28,54 @@
   position: relative;
   isolation: isolate;
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 18px;
   border: 0;
   border-radius: var(--r-chip);
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line);
-  color: var(--ink-2);
-  font-weight: 600;
+  background: var(--sp-pill);
+  color: var(--sp-ink);
+  font-weight: 500;
   font-size: 15px;
   overflow: hidden;
   transition: transform var(--t-micro) var(--ease-out);
 }
 
+/* Hover and "active" are an overlay whose opacity changes: no color is animated. */
 .prompt-tab::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: var(--ink);
+  background: var(--sp-pill-solid);
   opacity: 0;
   transition: opacity var(--t-short) ease;
 }
 
 .prompt-tab:hover::before {
-  opacity: 0.06;
+  opacity: 0.07;
 }
 
 .prompt-tab:active {
   transform: scale(0.98);
 }
 
-.prompt-tab--racing.is-active {
-  box-shadow: inset 0 0 0 2px var(--warm);
-  color: var(--ink);
+.prompt-tab.is-active {
+  color: var(--sp-pill-solid-ink);
 }
 
-.prompt-tab--orbitarium.is-active {
-  box-shadow: inset 0 0 0 2px var(--cool);
-  color: var(--ink);
+.prompt-tab.is-active::before {
+  opacity: 1;
 }
 
 .prompt-panel {
   margin-top: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  background: var(--card);
-  overflow: hidden;
-}
-
-.prompt-panel--racing {
-  border-color: var(--line-warm);
-}
-
-.prompt-panel--orbitarium {
-  border-color: var(--line-cool);
+  border-block: 1px solid var(--sp-line);
 }
 
 .prompt-panel__inner {
   display: grid;
   gap: 24px;
   justify-items: start;
-  padding: clamp(20px, 3vw, 32px);
+  padding-block: clamp(22px, 3vw, 32px);
   animation: fade-in var(--t-short) ease both;
 }
 
@@ -109,11 +91,12 @@
 }
 
 .prompt-panel__facts dt {
-  color: var(--ink-3);
+  color: var(--sp-ink-3);
   font-size: 14px;
 }
 
 .prompt-panel__facts dd {
+  color: var(--sp-ink);
   overflow-wrap: anywhere;
 }
 
@@ -124,7 +107,7 @@
 }
 
 .prompt-panel__runs-title {
-  color: var(--ink-3);
+  color: var(--sp-ink-3);
   font-size: 14px;
 }
 
@@ -134,10 +117,6 @@
   gap: 8px;
 }
 
-.prompt-panel__chips .chip {
-  color: var(--ink);
-}
-
 .prompt-panel__cat {
-  color: var(--ink-2);
+  color: var(--sp-ink-2);
 }

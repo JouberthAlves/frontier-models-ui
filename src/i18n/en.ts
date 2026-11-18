@@ -134,7 +134,7 @@ export const en: Dict = {
       'Frontier Models is an independent benchmark archive. Model names identify the systems used for individual runs.',
     repo: 'Archive repository',
     methodology: 'Methodology',
-    credit: 'Background and text effects adapted from React Bits by David Haz (MIT + Commons Clause).',
+    credit: 'Text effects adapted from React Bits by David Haz (MIT + Commons Clause).',
     links: 'Archive links'
   },
   loader: {

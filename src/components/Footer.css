@@ -4,7 +4,9 @@
   padding: 48px 0 24px;
 }
 
+/* The orange → cyan seam stays, as a hairline. */
 .footer__seam {
+  opacity: 0.7;
   position: absolute;
   top: 0;
   left: 0;
@@ -32,7 +34,7 @@
 
 .footer__about {
   max-width: 62ch;
-  color: var(--ink-2);
+  color: var(--sp-ink-2);
 }
 
 .footer__links {
@@ -44,7 +46,7 @@
 .footer__credit-link {
   color: var(--ink-2);
   text-decoration: underline;
-  text-decoration-color: var(--line-cool);
+  text-decoration-color: var(--sp-line);
   text-underline-offset: 3px;
   display: inline-block;
   padding-block: 12px;

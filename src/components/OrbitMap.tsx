@@ -16,6 +16,9 @@ const SQUASH = 0.42;
 const TILT = -12;
 const R_MIN = 92;
 const R_MAX = 240;
+/** Planet and sun (glow) radius, in viewBox units. */
+const PLANET_R = 9;
+const SUN_R = 40;
 
 /** One orbit per run, from the data: radii spread between R_MIN and R_MAX, slower further out. */
 function orbits(count: number) {
@@ -35,6 +38,9 @@ function orbits(count: number) {
  * ellipse); the planet counter-rotates and counter-scales so it stays round and its label
  * upright. CSS animation on transform only; only with a real GPU and without reduced motion;
  * paused off screen and in hidden tabs.
+ *
+ * v3 look: thin white orbits, the sun as a soft white glow, planets as small shaded spheres in
+ * the model color, small grey labels.
  *
  * v2: RaceMap hides each planet (`data-orbit-planet`) until its car arrives from the track and
  * reads the live position of `data-orbit-body` for the zero-g flight. Without that engine
@@ -87,7 +93,7 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
     }
   };
 
-  const labelSize = 14 * scale;
+  const labelSize = 13 * scale;
   const hit = Math.max(22 * scale, 18);
   const rings = orbits(runs.length);
 
@@ -100,13 +106,22 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
       aria-label={t.orbitarium.map}
     >
       <defs>
+        {/* The sun: a soft white glow. */}
         <radialGradient id="orbit-star" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fff5ed" />
-          <stop offset="55%" stopColor="#ffb76b" />
-          <stop offset="100%" stopColor="#ffb76b" stopOpacity="0" />
+          <stop offset="0%" stopColor="#fff" />
+          <stop offset="22%" stopColor="#fff" stopOpacity="0.95" />
+          <stop offset="45%" stopColor="#fff" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        {/* Light from the upper left and shade on the far side: makes a flat disc a small sphere. */}
+        <radialGradient id="orbit-shade" cx="34%" cy="30%" r="78%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.5" />
+          <stop offset="42%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="58%" stopColor="#000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.42" />
         </radialGradient>
       </defs>
-      <circle cx={C} cy={C} r={26} fill="url(#orbit-star)" />
+      <circle cx={C} cy={C} r={SUN_R} fill="url(#orbit-star)" />
       <g transform={`rotate(${TILT} ${C} ${C})`}>
         {rings.map((ring, index) => (
           <ellipse key={index} cx={C} cy={C} rx={ring.radius} ry={ring.radius * SQUASH} className="orbit-map__orbit" />
@@ -139,12 +154,13 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
                     >
                       <circle cx={px} cy={C} r={hit} className="orbit-map__hit" />
                       <circle cx={px} cy={C} r={16 + 4 * Math.min(scale, 2)} className="orbit-map__focus" />
-                      {selected && <circle cx={px} cy={C} r={17} className="orbit-map__ring" />}
-                      <circle cx={px} cy={C} r={11} stroke={colorOf(run)} className="orbit-map__arrive" />
-                      <circle cx={px} cy={C} r={11} fill={colorOf(run)} className="orbit-map__body" data-orbit-body />
+                      {selected && <circle cx={px} cy={C} r={PLANET_R + 6} className="orbit-map__ring" />}
+                      <circle cx={px} cy={C} r={PLANET_R} stroke={colorOf(run)} className="orbit-map__arrive" />
+                      <circle cx={px} cy={C} r={PLANET_R} fill={colorOf(run)} className="orbit-map__body" data-orbit-body />
+                      <circle cx={px} cy={C} r={PLANET_R} fill="url(#orbit-shade)" className="orbit-map__shade" />
                       <text
                         x={px}
-                        y={C + 22 + labelSize}
+                        y={C + PLANET_R + 9 + labelSize}
                         textAnchor="middle"
                         className="orbit-map__label"
                         style={{ fontSize: `${labelSize}px` }}

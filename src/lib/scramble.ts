@@ -6,15 +6,15 @@ const isSpace = (char: string) => /\s/.test(char);
 
 /**
  * "Decrypt" hover (spec-v2 §7, option D3): the letters scramble and resolve from left to right,
- * 35 ms per step, 2 steps per letter. `shown` is null at rest. Only runs on devices with hover
- * and with motion enabled.
+ * 35 ms per step, 2 steps per letter. `shown` is null at rest. Only runs with motion enabled
+ * and, unless `play(true)` asks for it (a reveal that is not a hover), on devices with hover.
  */
 export function useScramble(text: string, speed = 35, stepsPerChar = 2) {
   const [frame, setFrame] = useState<{ text: string; shown: string[] } | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
-  const play = useCallback(() => {
-    if (prefersReducedMotion() || !window.matchMedia?.('(hover: hover)').matches) return;
+  const play = useCallback((anyDevice = false) => {
+    if (prefersReducedMotion() || (!anyDevice && !window.matchMedia?.('(hover: hover)').matches)) return;
     clearInterval(timer.current);
     const letters = Array.from(text);
     let step = 0;

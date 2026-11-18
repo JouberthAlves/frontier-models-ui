@@ -16,6 +16,9 @@ export interface BootState {
   phase: BootPhase;
 }
 
+/** Faces of the space font (spec-v3 §3.1) loaded with the "fonts" step. */
+const SPACE_FONTS = ["500 1em 'Geist'", "400 1em 'Geist'"];
+
 const CAP_MS = 12000;
 const HOLD_MS = 400;
 const DARK_MS = 160;
@@ -79,8 +82,13 @@ export function startBoot(steps: Partial<Record<BootStep, () => Promise<unknown>
   started = true;
   setTimeout(lightsOut, CAP_MS);
   const fonts = document.fonts;
-  if (fonts?.ready) fonts.ready.then(() => markStep('fonts'), () => markStep('fonts'));
-  else markStep('fonts');
+  const fontsDone = () => markStep('fonts');
+  if (fonts?.ready) {
+    // The space font is asked for by name, so it is in before the lights go out even though
+    // its text is far down the page.
+    const wanted = SPACE_FONTS.map(font => fonts.load(font).catch(() => undefined));
+    Promise.all([fonts.ready, ...wanted]).then(fontsDone, fontsDone);
+  } else fontsDone();
   (Object.keys(steps) as BootStep[]).forEach(step => {
     const done = () => markStep(step);
     steps[step]?.().then(done, done);

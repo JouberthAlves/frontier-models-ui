@@ -1,26 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import Galaxy from './bits/Galaxy';
+import { useEffect, useState } from 'react';
+import SpiralGalaxy from './space/SpiralGalaxy';
 import { markStep } from '../lib/boot';
 import { hasGpu, reportGalaxyOff } from '../lib/gpu';
 import { isSmallScreen, isTouchDevice, useReducedMotion } from '../lib/motion';
+import { SPIRAL_POINTS } from '../lib/spiral';
 import './Background.css';
 
-// Cool tints with a few warm ones (one slot in eight).
-const STAR_COLORS = ['#83caff', '#85e4eb', '#f1f6fd', '#83caff', '#85e4eb', '#f1f6fd', '#f1f6fd', '#ffc99d'];
-
 /**
- * Global background, fixed behind the page: navy base gradient, the sky (Galaxy shader with a
- * real GPU, otherwise a static CSS star field) and the cool veil of the Orbitarium.
+ * Global background, fixed behind the page: the navy base (behind the racing zone) and the sky
+ * of the space (spec-v3 §3): near-black, with the spiral galaxy in WebGL when there is a real
+ * GPU and motion is allowed, otherwise a static CSS star field (the still picture of the galaxy
+ * is drawn by the Orbitarium section itself, see space/SpiralStill.tsx).
  *
- * v2: the sky is hidden behind the map of the racing zone. RaceMap fades the `[data-race-sky]`
- * wrapper in from the finish line on; the Galaxy is compiled while the page loads (loading
+ * The sky is hidden behind the map of the racing zone. RaceMap fades the `[data-race-sky]`
+ * wrapper in from the finish line on; the galaxy is compiled while the page loads (loading
  * step 5) and only renders once the finish line is within one screen.
  */
 export default function Background() {
   const reduced = useReducedMotion();
   const [failed, setFailed] = useState(false);
   const [near, setNear] = useState(false);
-  const veilRef = useRef<HTMLDivElement>(null);
 
   const gpu = !reduced && hasGpu();
   const showGalaxy = gpu && !failed;
@@ -49,50 +48,27 @@ export default function Background() {
     return () => observer.disconnect();
   }, []);
 
-  // Cool veil: on while the Orbitarium crosses the middle line of the viewport.
-  useEffect(() => {
-    const veil = veilRef.current;
-    const section = document.getElementById('orbitarium');
-    if (!veil || !section || typeof IntersectionObserver !== 'function') return undefined;
-    const observer = new IntersectionObserver(
-      entries => {
-        veil.dataset.on = String(entries.some(entry => entry.isIntersecting));
-      },
-      { rootMargin: '-45% 0px -45% 0px', threshold: 0 }
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
-
-  const touch = isTouchDevice();
-  const small = isSmallScreen();
-
   return (
     <div className="bg" aria-hidden="true">
       <div className="bg__base" />
       <div className="bg__sky" data-race-sky>
         <div className={`bg__stars${showGalaxy ? ' is-hidden' : ''}`} />
         {showGalaxy && (
-          <div className="bg__galaxy">
-            <Galaxy
-              starColors={STAR_COLORS}
-              density={small ? 0.6 : 1}
-              layers={small ? 2 : 4}
-              dpr={touch ? 1 : Math.min(window.devicePixelRatio || 1, 1.25)}
-              frameRateCap={touch ? 30 : 0}
-              paused={!near}
-              onReady={() => markStep('sky')}
-              onFail={reason => {
-                // Frozen: keep the last complete frame on screen. Lost / unavailable: static stars.
-                if (reason !== 'frozen') setFailed(true);
-                reportGalaxyOff();
-                markStep('sky');
-              }}
-            />
-          </div>
+          <SpiralGalaxy
+            points={isSmallScreen() ? SPIRAL_POINTS.phone : SPIRAL_POINTS.desktop}
+            frameRateCap={isTouchDevice() ? 30 : 0}
+            paused={!near}
+            onReady={() => markStep('sky')}
+            onFail={() => {
+              // No context, frozen by the watchdog or context lost: the static stars take over,
+              // the Orbitarium shows the still picture and the notice bar comes up.
+              setFailed(true);
+              reportGalaxyOff();
+              markStep('sky');
+            }}
+          />
         )}
       </div>
-      <div ref={veilRef} className="bg__veil bg__veil--cool" data-on="false" />
     </div>
   );
 }

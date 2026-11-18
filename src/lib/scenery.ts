@@ -28,6 +28,11 @@ export const SCENERY_SEED = 20261118;
 export const MAX_PIECES = 300;
 const BAND = 400;
 const NAV_H = 64;
+/** px kept free between a piece and a card (cliff rocks keep CLIFF_ROCK_GAP more). */
+const CARD_GAP = 12;
+const CLIFF_ROCK_GAP = 8;
+/** px kept free between a piece and the boxes of the hero h1 / p / dl / buttons. */
+const CALM_GAP = 16;
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -713,8 +718,11 @@ export function buildScenery(input: SceneryInput): Scenery {
   /** Room for a piece of this footprint at (x, y)? */
   const free = (x: number, y: number, rad: number) => {
     if (y > limitY) return false;
-    if (inCard(x, y, desktop ? 16 + rad * 0.75 : phone ? 2 : 8 + rad * 0.3)) return false;
-    if (inRects(calm, x, y, (desktop ? 18 : 8) + rad * 0.7)) return false;
+    // Cards: the whole footprint stays CARD_GAP px clear of them, so no sprite is cut by a card
+    // edge. Phones keep the old rule: the cards fill the width and the map only shows between them.
+    if (inCard(x, y, phone ? 2 : CARD_GAP + rad)) return false;
+    // Hero title, lede, numbers and buttons: the footprint stays CALM_GAP px away from each box.
+    if (inRects(calm, x, y, CALM_GAP + rad)) return false;
     if (track.distance(x, y) < roadW / 2 + 10 + rad * 0.85) return false;
     if (riverGap(x, y) < 8 + rad * 0.75) return false;
     if (cliffHit(x, y, rad * 0.6 + 4)) return false;
@@ -868,13 +876,25 @@ export function buildScenery(input: SceneryInput): Scenery {
     }
     // Wooden fence along the front and the back of the village (upright runs of three panels
     // that follow the edge), open where a street leaves.
+    // The houses are already placed: a run is skipped where it would cross one (the houses
+    // claim the ground first), and where it would land on another run (doubled posts).
     const rowW = 84 * hs;
+    // Two neighbouring runs share their end post, like the panels inside a run.
+    const rowStep = 81 * hs;
+    const rowHalfH = (KIT_PARTS.fence[0].ry + 2) * hs;
+    const buildings = pieces.filter(piece => piece.id.startsWith('house') || piece.id === 'church');
+    const runs: { x: number; y: number }[] = [];
     for (const side of [-1, 1]) {
-      const span = Math.max(0, Math.floor((hw * 1.24) / rowW));
+      const span = Math.max(0, Math.floor((hw * 1.24) / rowStep));
       for (let k = 0; k < span; k += 1) {
-        const x = cx + (k - (span - 1) / 2) * rowW;
+        const x = cx + (k - (span - 1) / 2) * rowStep;
         const y = cy + side * hh * 0.97 * Math.pow(1 - Math.pow(Math.abs(x - cx) / hw, POWER), 1 / POWER);
         if (!offLanes(x, y, street / 2 + rowW * 0.55)) continue;
+        // A run in front of a house (lower on the page) is drawn over it: not within the house's
+        // footprint. A run behind a house simply passes behind its roof.
+        if (buildings.some(b => Math.abs(b.x - x) < rowW / 2 + b.rad * 0.8 && y > b.y - 2 && y - b.y < b.rad + rowHalfH + 2)) continue;
+        if (runs.some(run => Math.abs(run.x - x) < rowW * 0.9 && Math.abs(run.y - y) < rowHalfH * 2 + 4)) continue;
+        runs.push({ x, y });
         add('fence-row', x, y, hs, 0, true);
       }
     }
@@ -901,6 +921,8 @@ export function buildScenery(input: SceneryInput): Scenery {
       const rad = FOOT[id] * s;
       const reach = norm(x, y, kx, ky);
       if (reach > 1 || keep < reach * 0.55 || y > breakY - 60 || inSand(x, y)) continue;
+      // Whole on the page: never cut by the edge of the screen.
+      if (x < rad + 4 || x > W - rad - 4) continue;
       if (!free(x, y, rad * 1.15) || crowded(x, y, rad, 1.25)) continue;
       add(id, x, y, s, (turn - 0.5) * 6, true);
       out += 1;
@@ -932,7 +954,7 @@ export function buildScenery(input: SceneryInput): Scenery {
           x < 6 ||
           x > W - 6 ||
           inCard(x, y, deep + 12) ||
-          inRects(calm, x, y, deep + 8) ||
+          inRects(calm, x, y, deep + CALM_GAP) ||
           inSand(x, y) ||
           inSea(x, y, deep + 6) ||
           inCove(x, y, deep + 6) ||
@@ -1011,7 +1033,7 @@ export function buildScenery(input: SceneryInput): Scenery {
       const at = clamp(Math.round((x + 24) / CS), 0, cliffN - 1);
       const depth = cliffDepths[at];
       const y = cliffTops[at] + depth + 9 + FOOT[id] * s * 0.45;
-      if (depth > cliffDeep * 0.45 && !inCard(x, y, 6) && track.distance(x, y) > roadW / 2 + 20 && !crowded(x, y, FOOT[id] * s, 0.8)) {
+      if (depth > cliffDeep * 0.45 && !inCard(x, y, CARD_GAP + CLIFF_ROCK_GAP + FOOT[id] * s) && track.distance(x, y) > roadW / 2 + 20 && !crowded(x, y, FOOT[id] * s, 0.8)) {
         add(id, x, y, s, turnOf(id, u, v), true);
       }
       x += (48 + u * 74) * unit;
@@ -1126,22 +1148,6 @@ export function buildScenery(input: SceneryInput): Scenery {
   };
 }
 
-/* ---------- the last stretch of road, in slices that fade one after the other ---------- */
-export interface TailSlice {
-  from: number;
-  to: number;
-}
-
-export function buildSlices(track: Track, breakLen: number): TailSlice[] {
-  const span = Math.max(1, track.length - breakLen);
-  const count = clamp(Math.round(span / 120), 3, 9);
-  const slices: TailSlice[] = [];
-  for (let i = 0; i < count; i += 1) {
-    slices.push({ from: breakLen + (span * i) / count, to: breakLen + (span * (i + 1)) / count });
-  }
-  return slices;
-}
-
 /* ---------- pieces of road and scenery that break off after the finish ---------- */
 export type ChunkKind = 'asphalt' | 'kerb-red' | 'kerb-white' | 'leaf' | 'roof';
 
@@ -1156,10 +1162,8 @@ export interface Chunk {
   dx: number;
   dy: number;
   rot: number;
-  /** Track length at which the break front lets it go. */
+  /** Track length where it sits: the pieces let go in a short wave from the top of the stretch down. */
   at: number;
-  /** Track length at which it shows (its slice of road starts to fade). */
-  show: number;
   /** Opacity of the star it ends as. */
   glow: number;
   cool: boolean;
@@ -1168,7 +1172,7 @@ export interface Chunk {
 const MAX_CHUNKS = 260;
 const MIN_CHUNKS = 150;
 
-export function buildChunks(track: Track, breakLen: number, slices: TailSlice[], pieces: Piece[], width: number): Chunk[] {
+export function buildChunks(track: Track, breakLen: number, pieces: Piece[], width: number): Chunk[] {
   const rng = mulberry32(SCENERY_SEED ^ 0x51ed270b ^ Math.round(width / 50));
   const chunks: Chunk[] = [];
   const spread = Math.min(560, width * 0.75);
@@ -1181,7 +1185,7 @@ export function buildChunks(track: Track, breakLen: number, slices: TailSlice[],
     const points = [-hw + j(), -hl + j(), hw - j(), -hl + j(), hw - j() * 0.6, (rng() - 0.5) * hl, hw - j(), hl - j(), -hw + j(), hl - j()];
     return `${polyline(points)}Z`;
   };
-  const make = (kind: ChunkKind, x: number, y: number, turn: number, d: string, at: number, show: number): Chunk => ({
+  const make = (kind: ChunkKind, x: number, y: number, turn: number, d: string, at: number): Chunk => ({
     kind,
     x,
     y,
@@ -1191,7 +1195,6 @@ export function buildChunks(track: Track, breakLen: number, slices: TailSlice[],
     dy: 140 + rng() * 540,
     rot: (rng() - 0.5) * 560,
     at: at + rng() * 46,
-    show,
     glow: 0.35 + rng() * 0.6,
     cool: rng() < 0.4
   });
@@ -1209,15 +1212,14 @@ export function buildChunks(track: Track, breakLen: number, slices: TailSlice[],
     // Unit vector across the road.
     const nx = -Math.sin(a);
     const ny = Math.cos(a);
-    const show = (slices.find(slice => s < slice.to) ?? slices[slices.length - 1]).from;
     const turn = p.angle - 90;
     for (let lane = 0; lane < lanes; lane += 1) {
       const off = (lane + 0.5) * laneW - roadW / 2;
-      chunks.push(make('asphalt', p.x + nx * off, p.y + ny * off, turn, shard(laneW / 2 + 0.5, step / 2 + 0.5), s, show));
+      chunks.push(make('asphalt', p.x + nx * off, p.y + ny * off, turn, shard(laneW / 2 + 0.5, step / 2 + 0.5), s));
     }
     for (const side of [-1, 1]) {
       const off = side * (roadW / 2 + 2.5);
-      chunks.push(make((row + (side > 0 ? 1 : 0)) % 2 ? 'kerb-red' : 'kerb-white', p.x + nx * off, p.y + ny * off, turn, shard(3.4, step / 2 + 0.5), s, show));
+      chunks.push(make((row + (side > 0 ? 1 : 0)) % 2 ? 'kerb-red' : 'kerb-white', p.x + nx * off, p.y + ny * off, turn, shard(3.4, step / 2 + 0.5), s));
     }
   }
 
@@ -1241,7 +1243,7 @@ export function buildChunks(track: Track, breakLen: number, slices: TailSlice[],
       const x = piece.x + (rng() - 0.5) * piece.rad * 1.3;
       const y = piece.y + (rng() - 0.5) * piece.rad * 1.3;
       const at = Math.max(breakLen, track.lenAtY(y));
-      chunks.push(make(roof ? 'roof' : 'leaf', x, y, rng() * 360, leaf(), at, at));
+      chunks.push(make(roof ? 'roof' : 'leaf', x, y, rng() * 360, leaf(), at));
     }
   }
   while (chunks.length < MIN_CHUNKS) {
@@ -1249,7 +1251,7 @@ export function buildChunks(track: Track, breakLen: number, slices: TailSlice[],
     const p = track.at(s);
     const side = rng() < 0.5 ? -1 : 1;
     const x = clamp(p.x + side * (roadW / 2 + 16 + rng() * Math.min(width, 700) * 0.45), 4, width - 4);
-    chunks.push(make('leaf', x, p.y + (rng() - 0.5) * 60, rng() * 360, leaf(), s, s));
+    chunks.push(make('leaf', x, p.y + (rng() - 0.5) * 60, rng() * 360, leaf(), s));
   }
   return chunks.slice(0, MAX_CHUNKS);
 }

@@ -1,8 +1,6 @@
 .bg__base,
 .bg__sky,
-.bg__stars,
-.bg__galaxy,
-.bg__veil {
+.bg__stars {
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -13,38 +11,30 @@
   background: linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 52%, var(--bg-2) 100%);
 }
 
-/* The sky: RaceMap sets its opacity from the scroll position (0 on the track → 1 in space).
-   Without the engine (reduced motion) it simply stays on, behind the map. */
+/* The sky of the space: near-black, a touch of navy towards the edges. RaceMap sets its opacity
+   from the scroll position (0 on the track → 1 in space). Without the engine (reduced motion) it
+   simply stays on, behind the map. */
 .bg__sky {
   z-index: -3;
+  background: radial-gradient(120% 90% at 50% 40%, var(--sp-bg) 50%, var(--sp-bg-2) 100%);
 }
 
-/* static star field: shown when the Galaxy is not running */
+/* Static star field: fine white points, shown when the WebGL galaxy is not running. */
 .bg__stars {
   background-image:
-    radial-gradient(1px 1px at 37px 59px, rgba(241, 246, 253, 0.5) 50%, transparent 51%),
-    radial-gradient(1px 1px at 141px 233px, rgba(131, 202, 255, 0.35) 50%, transparent 51%),
-    radial-gradient(1px 1px at 311px 97px, rgba(133, 228, 235, 0.25) 50%, transparent 51%);
+    radial-gradient(1px 1px at 37px 59px, rgba(255, 255, 255, 0.62) 50%, transparent 51%),
+    radial-gradient(1px 1px at 141px 233px, rgba(207, 227, 255, 0.5) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 311px 97px, rgba(255, 255, 255, 0.4) 50%, transparent 51%),
+    radial-gradient(1px 1px at 83px 401px, rgba(255, 199, 154, 0.42) 50%, transparent 51%),
+    radial-gradient(1px 1px at 229px 17px, rgba(156, 196, 255, 0.4) 50%, transparent 51%);
   background-size:
     211px 211px,
     347px 347px,
-    503px 503px;
+    503px 503px,
+    619px 619px,
+    283px 283px;
 }
 
 .bg__stars.is-hidden {
   opacity: 0;
-}
-
-.bg__veil {
-  z-index: -1;
-  opacity: 0;
-  transition: opacity var(--t-section) var(--ease-rise);
-}
-
-.bg__veil--cool {
-  background: linear-gradient(245deg, rgba(23, 40, 59, 0.7), rgba(20, 36, 58, 0.3) 55%, transparent 85%);
-}
-
-.bg__veil[data-on='true'] {
-  opacity: 1;
 }
