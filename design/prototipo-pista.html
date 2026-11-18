@@ -1,0 +1,310 @@
+<title>Frontier Models UI · Protótipo da pista</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..150,600..900&family=Atkinson+Hyperlegible+Next:wght@400;600&family=Red+Hat+Mono:wght@500&display=swap">
+<style>
+/* Layout: page of grey content blocks (stand-ins for the real sections); a top-down track snakes down the side gutters behind them, crossing in the gaps; 5 neutral cars follow the scroll, cross the finish line, float in zero-g and become the Orbitarium planets. */
+:root{
+  color-scheme:dark;
+  --asphalt-bg:#0c0e13; --space:#080f1d; --block:#151b26; --block-line:#2a3242; --ink:#f1f6fd; --ink2:#b7cbe1; --ink3:#8fa5bf;
+  --warm:#fdaf6d; --cyan:#85e4eb; --red:#e8423a; --curb-white:#f1eee6; --road:#1b1d23;
+  --f-d:"Anybody","Arial Narrow",sans-serif; --f-b:"Atkinson Hyperlegible Next",system-ui,sans-serif; --f-m:"Red Hat Mono",ui-monospace,monospace;
+}
+html{background:var(--asphalt-bg)}
+body{margin:0;background:var(--asphalt-bg);color:var(--ink);font-family:var(--f-b);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+#space{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;
+  background:radial-gradient(1px 1px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 72% 34%,#cfe8ff,transparent),radial-gradient(1.4px 1.4px at 38% 76%,#fff,transparent),radial-gradient(1px 1px at 86% 12%,#fff,transparent),radial-gradient(1px 1px at 56% 48%,#85e4eb,transparent),radial-gradient(1px 1px at 18% 66%,#fff,transparent),radial-gradient(1px 1px at 92% 82%,#ffd9b5,transparent),radial-gradient(1px 1px at 30% 40%,#fff,transparent),radial-gradient(1.2px 1.2px at 64% 90%,#fff,transparent),linear-gradient(160deg,#0c1a2c,var(--space))}
+#asphalt{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 .55 0 0 0 0 .55 0 0 0 0 .6 0 0 0 .07 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+#track{position:absolute;left:0;top:0;width:100%;z-index:1;pointer-events:none;overflow:visible}
+main{position:relative;z-index:2;max-width:880px;margin:0 auto;display:grid;gap:0}
+.block{background:var(--block);border:1px solid var(--block-line);border-radius:16px;padding:22px 24px;display:grid;gap:10px;min-height:var(--h,260px);align-content:start}
+.block h2{margin:0;font:850 clamp(22px,3vw,34px)/1.1 var(--f-d);font-stretch:112%;font-variation-settings:"wdth" 112}
+.block p{margin:0;color:var(--ink2);max-width:60ch}
+.ph{border-radius:10px;background:repeating-linear-gradient(135deg,#1c2331 0 10px,#19202d 10px 20px);min-height:120px}
+.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.row .ph{min-height:90px}
+.gap{height:var(--g,220px)}
+.hero{min-height:min(88svh,820px);display:grid;align-content:center;gap:14px;padding-top:40px}
+.hero h1{margin:0;font:900 clamp(48px,10vw,150px)/.86 var(--f-d);font-stretch:125%;font-variation-settings:"wdth" 125;letter-spacing:-.02em}
+.hero h1 span{display:block}
+.hero h1 .w{color:#ffcf9f}.hero h1 .c{color:#9ae6ef}
+.hero p{margin:0;color:var(--ink2);max-width:46ch;font-size:18px}
+.note{font:500 12px var(--f-m);color:var(--ink3)}
+.finish-label{text-align:center;font:500 13px var(--f-m);color:var(--ink3);padding-block:8px}
+#orbit{position:relative;min-height:620px}
+#orbitMap{width:100%;max-width:640px;height:auto;margin:10px auto 0;display:block;overflow:visible}
+#orbitMap ellipse{fill:none;stroke:#3e617f;stroke-width:1}
+#orbitMap .lbl{font:600 13px var(--f-b);fill:var(--ink);paint-order:stroke;stroke:#080f1d;stroke-width:4px;opacity:0}
+#orbitMap .planet{opacity:0}
+.end{min-height:60vh;display:grid;place-items:center;color:var(--ink3);font:500 13px var(--f-m)}
+.hud{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:12px;z-index:5;background:rgba(8,15,29,.8);border:1px solid #25415d;border-radius:10px;padding:8px 10px;font:500 12px var(--f-m);color:var(--ink2)}
+@media (max-width:899px){.row{grid-template-columns:1fr 1fr}}
+</style>
+
+<div id="asphalt" aria-hidden="true"></div>
+<div id="space" aria-hidden="true"></div>
+<svg id="track" aria-hidden="true"></svg>
+
+<main id="page">
+  <section class="hero block" style="background:transparent;border:0;padding-inline:0">
+    <h1><span class="w">FRONTIER</span><span class="c">MODELS</span></h1>
+    <p>Protótipo: role a página. Os 5 carros seguem a rolagem pela pista, cruzam a chegada no fim do Racing e viram as estrelas do Orbitarium.</p>
+    <p class="note">blocos cinza = onde entram as seções reais</p>
+  </section>
+  <div class="gap" style="--g:140px"></div>
+  <section class="block" style="--h:300px"><h2>Racing-bench V3.4</h2><p>Texto de abertura e o seletor das 12 cenas.</p><div class="row"><div class="ph"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div></div></section>
+  <div class="gap"></div>
+  <section class="block" style="--h:420px"><h2>Palco de comparação</h2><p>A mesma cena de cada modelo escolhido, lado a lado.</p><div class="row" style="grid-template-columns:1fr 1fr"><div class="ph" style="min-height:220px"></div><div class="ph" style="min-height:220px"></div></div></section>
+  <div class="gap"></div>
+  <section class="block" style="--h:380px"><h2>Os 6 jogos</h2><p>Cards com miniatura, Jogar e Código.</p><div class="row"><div class="ph"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div></div></section>
+  <div class="gap" style="--g:260px"></div>
+  <div class="finish-label" id="finishLabel">linha de chegada</div>
+  <div class="gap" style="--g:70vh"></div>
+  <section id="orbit" class="block" style="background:rgba(14,32,52,.55)">
+    <h2>Orbitarium-bench</h2>
+    <p>Cada carro chega flutuando e vira o planeta de um modelo.</p>
+    <svg id="orbitMap" viewBox="0 0 600 330" role="img" aria-label="Mapa orbital com 5 planetas"></svg>
+  </section>
+  <div class="end">fim do protótipo · role para cima e a corrida volta</div>
+</main>
+<div class="hud" id="hud" aria-live="off">rolagem: 0%</div>
+
+<script>
+(() => {
+'use strict';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+// Orbitarium current runs, in arena order (in the real site this comes from archive.json).
+const ORBIT = [
+  { name: 'GPT-6.1 Sol', color: '#facc6b' },
+  { name: 'GPT-6 Astra', color: '#aaa7ff' },
+  { name: 'Grok 4.7', color: '#d2a2ff' },
+  { name: 'Fable 5.1', color: '#72dfbd' },
+  { name: 'Gemini 4 Argon', color: '#83caff' },
+];
+const CARS = ORBIT.length;          // one car per Orbitarium run, from the data
+const SPACING = 54;                 // px between cars along the track
+const CAR_BODY = [214, 208, 200];   // neutral livery (warm grey) before the finish
+
+const track = document.getElementById('track');
+const orbitMap = document.getElementById('orbitMap');
+const space = document.getElementById('space');
+const hud = document.getElementById('hud');
+
+/* ---------- orbit map with 5 planet slots ---------- */
+const C = { x: 300, y: 165 };
+const RADII = [70, 105, 140, 175, 210];
+const ANG = [20, 140, 250, 330, 75];
+orbitMap.innerHTML = '';
+const gOrb = document.createElementNS(SVGNS, 'g'); gOrb.setAttribute('transform', `rotate(-12 ${C.x} ${C.y})`);
+orbitMap.appendChild(gOrb);
+const sun = document.createElementNS(SVGNS, 'circle'); sun.setAttribute('cx', C.x); sun.setAttribute('cy', C.y); sun.setAttribute('r', 16); sun.setAttribute('fill', 'url(#sunG)');
+orbitMap.insertAdjacentHTML('afterbegin', '<defs><radialGradient id="sunG"><stop offset="0" stop-color="#fff5ed"/><stop offset=".55" stop-color="#ffb76b"/><stop offset="1" stop-color="#ffb76b" stop-opacity="0"/></radialGradient></defs>');
+gOrb.appendChild(sun);
+const planets = ORBIT.map((m, i) => {
+  const e = document.createElementNS(SVGNS, 'ellipse');
+  e.setAttribute('cx', C.x); e.setAttribute('cy', C.y); e.setAttribute('rx', RADII[i]); e.setAttribute('ry', RADII[i] * .42); gOrb.appendChild(e);
+  const a = ANG[i] * Math.PI / 180;
+  const px = C.x + Math.cos(a) * RADII[i], py = C.y + Math.sin(a) * RADII[i] * .42;
+  const p = document.createElementNS(SVGNS, 'circle'); p.setAttribute('cx', px); p.setAttribute('cy', py); p.setAttribute('r', 9); p.setAttribute('fill', m.color); p.setAttribute('class', 'planet');
+  p.setAttribute('stroke', '#080f1d'); p.setAttribute('stroke-width', 2); gOrb.appendChild(p);
+  const t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', px); t.setAttribute('y', py + 26); t.setAttribute('text-anchor', 'middle'); t.setAttribute('class', 'lbl'); t.textContent = m.name;
+  // keep labels upright inside the tilted group
+  t.setAttribute('transform', `rotate(12 ${px} ${py})`); gOrb.appendChild(t);
+  return { el: p, lbl: t };
+});
+
+/* ---------- geometry: track path built from the real gaps between blocks ---------- */
+let geo = null;
+const docY = el => el.getBoundingClientRect().top + scrollY;
+
+function buildPath() {
+  const W = document.documentElement.clientWidth;
+  const main = document.getElementById('page');
+  const mr = main.getBoundingClientRect();
+  const desktop = W >= 900 && mr.left > 70;
+  const roadW = desktop ? 44 : 22;
+  const L = desktop ? mr.left / 2 : W - 14;
+  const R = desktop ? W - mr.left / 2 : W - 14;
+  const blocks = [...main.querySelectorAll('.block')].filter(b => b.id !== 'orbit');
+  // the grid starts at the top of the hero: the cars are lined up there when the page opens
+  const startY = docY(document.querySelector('.hero')) + 40;
+  const finishY = docY(document.getElementById('finishLabel'));
+  const endY = finishY + 260;
+  let d = `M ${L} ${startY}`;
+  let side = L, y = startY;
+  if (desktop) {
+    // cross to the other gutter in the gaps after Racing and after the stage, with smooth corners
+    const gapEls = [...main.querySelectorAll('.gap')];
+    const gaps = gapEls.slice(1, 3).map(g => ({ top: docY(g), h: g.offsetHeight }));
+    for (const g of gaps) {
+      const y0 = g.top + 20, y1 = g.top + g.h - 20;
+      const other = side === L ? R : L;
+      d += ` L ${side} ${y0 - 40}`;
+      d += ` C ${side} ${y0 + 30}, ${other} ${y1 - 70}, ${other} ${y1}`;
+      side = other; y = y1;
+    }
+    // last run: down the gutter past the 6 games, then swing to the center for the finish line
+    const last = gapEls[3]; const lt = docY(last);
+    const cx = W / 2;
+    d += ` L ${side} ${lt + 10}`;
+    d += ` C ${side} ${lt + last.offsetHeight * .7}, ${cx} ${finishY - 150}, ${cx} ${finishY}`;
+    d += ` L ${cx} ${endY}`;
+  } else {
+    d += ` L ${R} ${finishY} L ${R} ${endY}`;
+  }
+  return { d, roadW, desktop, finishY, endY, W };
+}
+
+function layout() {
+  const { d, roadW, desktop, finishY, endY } = buildPath();
+  const H = document.documentElement.scrollHeight;
+  track.setAttribute('height', H);
+  track.setAttribute('viewBox', `0 0 ${document.documentElement.clientWidth} ${H}`);
+  track.innerHTML = `
+    <defs>
+      <pattern id="check" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f1eee6"/><rect width="6" height="6" fill="#111"/><rect x="6" y="6" width="6" height="6" fill="#111"/></pattern>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+    </defs>
+    <g id="road">
+      <path d="${d}" fill="none" stroke="#e8423a" stroke-width="${roadW + 10}" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="#f1eee6" stroke-width="${roadW + 10}" stroke-dasharray="14 14" stroke-linejoin="round"/>
+      <path id="roadPath" d="${d}" fill="none" stroke="var(--road)" stroke-width="${roadW}" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="rgba(241,246,253,.45)" stroke-width="2" stroke-dasharray="18 22"/>
+    </g>
+    <g id="chunks"></g>
+    <g id="finish"></g>
+    <g id="cars"></g>`;
+  const path = track.querySelector('#roadPath');
+  const len = path.getTotalLength();
+  // sample: monotonic y → length lookup
+  const samples = [];
+  for (let s = 0; s <= len; s += 4) { const p = path.getPointAtLength(s); samples.push({ s, x: p.x, y: p.y }); }
+  const lenAtY = y => {
+    if (y <= samples[0].y) return 0;
+    for (let i = 1; i < samples.length; i++) if (samples[i].y >= y) return samples[i].s;
+    return len;
+  };
+  const finishLen = lenAtY(finishY);
+  // finish line: checkered band across the road at the finish
+  const fp = path.getPointAtLength(finishLen), fq = path.getPointAtLength(Math.min(len, finishLen + 1));
+  const ang = Math.atan2(fq.y - fp.y, fq.x - fp.x) * 180 / Math.PI;
+  track.querySelector('#finish').innerHTML = `<rect x="${fp.x - (roadW + 10) / 2}" y="${fp.y - 6}" width="${roadW + 10}" height="12" fill="url(#check)" transform="rotate(${ang - 90} ${fp.x} ${fp.y})"/>`;
+  // cars
+  const carsG = track.querySelector('#cars');
+  const scale = desktop ? 1 : .62;
+  const cars = Array.from({ length: CARS }, (_, i) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    // top-down car, nose pointing +y (down the page)
+    g.innerHTML = `
+      <g class="body">
+        <rect x="-9" y="-17" width="18" height="34" rx="6" class="paint"/>
+        <rect x="-11" y="-12" width="3" height="7" rx="1" fill="#0b0b0e"/><rect x="8" y="-12" width="3" height="7" rx="1" fill="#0b0b0e"/>
+        <rect x="-11" y="6" width="3" height="7" rx="1" fill="#0b0b0e"/><rect x="8" y="6" width="3" height="7" rx="1" fill="#0b0b0e"/>
+        <rect x="-6" y="-4" width="12" height="9" rx="2.5" fill="#20242c"/>
+        <rect x="-1.5" y="-17" width="3" height="34" fill="#fdaf6d" class="stripe"/>
+        <rect x="-7" y="14" width="4" height="2" rx="1" fill="#fff6d8"/><rect x="3" y="14" width="4" height="2" rx="1" fill="#fff6d8"/>
+      </g>
+      <circle class="star" r="9" fill="#fff" opacity="0" filter="url(#glow)"/>`;
+    carsG.appendChild(g);
+    return { g, body: g.querySelector('.body'), paint: g.querySelector('.paint'), star: g.querySelector('.star') };
+  });
+  // chunks: pieces of road past the finish that break off and drift into stars
+  const chunksG = track.querySelector('#chunks');
+  const chunks = [];
+  for (let s = finishLen - 40; s < len; s += 7) {
+    const p = path.getPointAtLength(s);
+    for (let k = 0; k < 3; k++) {
+      const r = document.createElementNS(SVGNS, 'rect');
+      const sz = 4 + Math.random() * 8;
+      r.setAttribute('width', sz); r.setAttribute('height', sz); r.setAttribute('fill', k ? '#1b1d23' : (Math.random() < .5 ? '#e8423a' : '#f1eee6'));
+      chunksG.appendChild(r);
+      chunks.push({ r, x: p.x + (Math.random() - .5) * roadW, y: p.y, dx: (Math.random() - .5) * 520, dy: 120 + Math.random() * 520, rot: (Math.random() - .5) * 540, sz, delay: Math.random() * .4 });
+    }
+  }
+  geo = { path, len, lenAtY, finishLen, finishY, endY, cars, chunks, scale, roadW };
+  update();
+}
+
+/* ---------- per-frame update from scroll ---------- */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const mix = (a, b, t) => a + (b - a) * t;
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const bez = (p0, p1, p2, p3, t) => { const u = 1 - t; return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3; };
+
+function planetDocPos(i) {
+  const b = planets[i].el.getBoundingClientRect();
+  return { x: b.left + b.width / 2 + scrollX, y: b.top + b.height / 2 + scrollY };
+}
+
+function update() {
+  if (!geo) return;
+  const { path, len, lenAtY, finishLen, endY, cars, chunks, scale } = geo;
+  const vh = innerHeight;
+  // at the top the lead car waits on the grid (5 car lengths from the start); as you scroll it runs
+  // down and settles ~58% down the viewport; past the end of the road the distance keeps growing
+  const gridLead = (CARS - 1) * SPACING + 30;
+  const lenToY = l => path.getPointAtLength(Math.min(len, l)).y;
+  const targetY = Math.max(lenToY(gridLead), scrollY + vh * .58 * clamp(scrollY / (vh * .6)) + (1 - clamp(scrollY / (vh * .6))) * lenToY(gridLead));
+  const exitLen = len;
+  const lead = targetY <= endY ? lenAtY(targetY) : exitLen + (targetY - endY);
+  const orbitTop = docY(document.getElementById('orbit'));
+  const floatSpan = Math.max(300, orbitTop + 260 - endY);
+  // global transition (track breaking up, sky fading in) follows the lead car's float
+  const T = clamp((lead - finishLen) / (vh * 1.1));
+  space.style.opacity = reduce ? (T > .5 ? 1 : 0) : clamp((lead - finishLen) / (floatSpan * .8)).toFixed(3);
+  track.querySelector('#road').style.opacity = 1 - clamp((T - .55) / .45) * .85;
+  chunks.forEach(c => {
+    const t = ease(clamp((T - c.delay) / (1 - c.delay)));
+    if (t <= 0) { c.r.setAttribute('opacity', 0); return; }
+    const x = c.x + c.dx * t, y = c.y + c.dy * t, sz = mix(c.sz, 1.4, t);
+    c.r.setAttribute('x', x); c.r.setAttribute('y', y); c.r.setAttribute('width', sz); c.r.setAttribute('height', sz);
+    c.r.setAttribute('transform', `rotate(${c.rot * t} ${x} ${y})`);
+    c.r.setAttribute('opacity', t < .85 ? 1 : (1 - (t - .85) / .15) * .9 + .1);
+    if (t > .6) c.r.setAttribute('fill', '#dfeeff');
+  });
+  cars.forEach((car, i) => {
+    const d = lead - i * SPACING;
+    let x, y, rot, s = scale, starOp = 0, carOp = 1, tint = 0;
+    if (d <= exitLen) {
+      const dd = clamp(d, 0, len);
+      const p = path.getPointAtLength(dd), q = path.getPointAtLength(Math.min(len, dd + 2));
+      x = p.x; y = p.y; rot = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI - 90;
+      if (d < 0) carOp = 0; // still behind the grid
+    } else {
+      // zero-g: drift from the end of the road to this car's planet, tumbling and shrinking
+      const t = ease(clamp((d - exitLen) / floatSpan));
+      const a = path.getPointAtLength(len), tgt = planetDocPos(i);
+      const side = i % 2 ? 1 : -1;
+      x = bez(a.x, a.x + side * (120 + i * 40), tgt.x - side * 160, tgt.x, t);
+      y = bez(a.y, a.y + 160, tgt.y - 260, tgt.y, t);
+      rot = (i * 70) + t * (220 + i * 60) * side;
+      s = scale * mix(1, .55, t);
+      tint = clamp(t * 1.4);
+      carOp = 1 - clamp((t - .8) / .2);
+      starOp = clamp((t - .72) / .28);
+      planets[i].el.style.opacity = starOp;
+      planets[i].lbl.style.opacity = starOp;
+    }
+    if (d <= exitLen) { planets[i].el.style.opacity = 0; planets[i].lbl.style.opacity = 0; }
+    const base = CAR_BODY, col = hex(ORBIT[i].color);
+    car.paint.setAttribute('fill', `rgb(${base.map((v, k) => Math.round(mix(v, col[k], tint))).join(',')})`);
+    car.g.setAttribute('transform', `translate(${x} ${y})`);
+    car.body.setAttribute('transform', `rotate(${rot}) scale(${s})`);
+    car.body.style.opacity = carOp;
+    car.star.setAttribute('fill', ORBIT[i].color);
+    car.star.setAttribute('opacity', starOp * .0); // the planet in the map takes over
+  });
+  const docH = document.documentElement.scrollHeight - innerHeight;
+  hud.textContent = `rolagem ${Math.round(scrollY / Math.max(1, docH) * 100)}% · ${T <= 0 ? 'na pista' : T < 1 ? 'gravidade zero' : 'no Orbitarium'}`;
+}
+
+let ticking = false;
+addEventListener('scroll', () => { if (ticking) return; ticking = true; requestAnimationFrame(() => { ticking = false; update(); }); }, { passive: true });
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 120); });
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(layout);
+layout();
+})();
+</script>
