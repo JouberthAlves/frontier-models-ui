@@ -3,23 +3,26 @@
  * the same seed and the same page width give the same map.
  *
  * The map is built in layers:
- *  1. terrain: sand and sea on the shore, soft grass blobs, the cliff step, the stream;
- *  2. the village: a sand plaza with the church, streets, rows of houses, fences along the plots;
- *  3. pieces: groves, woods and palm clusters first (composite symbols: one element draws 3 to 7
- *     trees), then single pieces in the room that is left. Both by seeded dart throwing per
+ *  1. terrain: sand and sea on the shore, soft grass blobs, the cliff step (one side of the road),
+ *     the winding stream;
+ *  2. the village: houses of varied size and turn packed around a sand plaza with the church,
+ *     curved streets, gardens and trees in the lots, a fence around it, a few houses outside it;
+ *  3. hedges along the road in places, clearings (some with a crop field);
+ *  4. pieces: big single trees, groves, woods and palm clusters first (composite symbols: one
+ *     element draws 3 to 7 trees), then single pieces in the room that is left. Both by seeded dart throwing per
  *     400 px band (a block that grows only reshuffles the bands it touches), away from the
  *     content blocks, the hero text, the road and the water.
  *
  * To get a different map, change SCENERY_SEED. To change what grows where, edit `ZONES`.
  */
 import { FOOT, type PieceId } from './sceneryKit';
-import type { BlockRect, Track } from './track';
+import { ROAD_TAIL, type BlockRect, type Track } from './track';
 
 export type { PieceId } from './sceneryKit';
 
 export const SCENERY_SEED = 20261118;
 /** Whole map SVG must stay under 650 elements (spec-v2 §9): this caps the placed pieces. */
-export const MAX_PIECES = 320;
+export const MAX_PIECES = 310;
 const BAND = 400;
 const NAV_H = 64;
 
@@ -68,13 +71,18 @@ export interface Scenery {
   foamInner: string;
   cove: string | null;
   coveFoam: string | null;
-  patches: { d: string; tail: boolean }[];
-  /** Cliff step: the face (filled), its top lip, and where the shadow falls. */
-  cliff: { face: string; lip: string } | null;
-  village: { plaza: Rect; radius: number; streets: string; streetWidth: number; fence: string } | null;
-  river: { d: string; width: number } | null;
+  patches: string[];
+  /** Cliff step: the face (filled), the shaded band along its foot, a rock seam, and its top lip. */
+  cliff: { face: string; foot: string; strata: string; lip: string } | null;
+  /** Plaza (a filled blob), dirt streets (stroked) and the fence around the cluster. */
+  village: { plaza: string; streets: string; streetWidth: number; fence: string } | null;
+  /** Stream: the water (filled, its width varies), the deeper middle, flow dashes, bank stones. */
+  river: { water: string; deep: string; deepWidth: number; flow: string; stones: string } | null;
   bridge: { x: number; y: number; angle: number; w: number; len: number } | null;
+  /** Rows of clipped bushes along the road (one path of circles). */
+  hedges: string;
   stand: { x: number; y: number; w: number; h: number };
+  moon: { x: number; y: number; r: number };
   stars: { d: string; o: number }[];
   pieces: Piece[];
 }
@@ -113,7 +121,7 @@ const ZONES: Zone[] = [
   // Shore (the grass beside the beach)
   {
     until: 0.22,
-    big: [['grove-b', 30], ['grove-c', 18], ['palms-a', 20], ['grove-a', 32]],
+    big: [['oak', 14], ['grove-b', 28], ['grove-c', 18], ['palms-a', 18], ['grove-a', 28]],
     bigGap: 58,
     small: [['tree', 26], ['tree2', 20], ['palm', 16], ['bush', 18], ['rock', 10], ['flowers', 8]],
     smallGap: 96,
@@ -122,7 +130,7 @@ const ZONES: Zone[] = [
   // Cliff and fields
   {
     until: 0.42,
-    big: [['grove-a', 46], ['grove-b', 30], ['grove-c', 16], ['woods-c', 8]],
+    big: [['oak', 20], ['grove-a', 38], ['grove-b', 26], ['grove-c', 16], ['woods-c', 8]],
     bigGap: 54,
     small: [['tree', 30], ['tree2', 24], ['bush', 16], ['rock', 8], ['rock2', 8], ['flowers', 8], ['pine', 6]],
     smallGap: 96,
@@ -131,16 +139,17 @@ const ZONES: Zone[] = [
   // Around the village
   {
     until: 0.66,
-    big: [['grove-a', 40], ['grove-b', 32], ['grove-c', 20], ['woods-c', 8]],
+    big: [['oak', 18], ['grove-a', 34], ['grove-b', 28], ['grove-c', 20], ['woods-c', 8]],
     bigGap: 56,
-    small: [['tree', 28], ['tree2', 22], ['bush', 16], ['flowers', 16], ['house', 6], ['house-sq', 4], ['rock', 5], ['pine', 3]],
+    // No houses here: they only stand in the village and on its outskirts.
+    small: [['tree', 30], ['tree2', 24], ['bush', 18], ['flowers', 18], ['rock', 6], ['pine', 4]],
     smallGap: 96,
     pack: 0.94
   },
   // Woods: almost fully covered by canopy
   {
     until: 0.9,
-    big: [['woods-a', 58], ['woods-b', 32], ['woods-c', 10]],
+    big: [['oak-d', 16], ['woods-a', 50], ['woods-b', 28], ['woods-c', 10]],
     bigGap: 30,
     small: [['dense', 44], ['pine', 36], ['tree2', 14], ['bush', 6]],
     smallGap: 44,
@@ -149,7 +158,7 @@ const ZONES: Zone[] = [
   // Finish
   {
     until: 2,
-    big: [['woods-c', 50], ['grove-c', 50]],
+    big: [['oak-d', 20], ['woods-c', 42], ['grove-c', 42]],
     bigGap: 110,
     small: [['bush', 40], ['pine', 30], ['tree2', 30]],
     smallGap: 104,
@@ -165,6 +174,13 @@ const SAND: Zone = {
   smallGap: 100,
   pack: 1.12
 };
+
+/** Big single trees: placed with the groves, at 1 to 1.6 of their size. */
+const LANDMARK = new Set<PieceId>(['oak', 'oak-d']);
+/** Trees whose size varies the most (0.7 to 1.6). */
+const SINGLE_TREE = new Set<PieceId>(['tree', 'tree2', 'pine', 'dense', 'palm', 'palm2', 'bush']);
+/** Low things that may grow in a clearing. */
+const GROUND_COVER = new Set<PieceId>(['flowers', 'bush', 'rock', 'rock2']);
 
 function pick(list: Mix, u: number): PieceId {
   const total = list.reduce((sum, item) => sum + item[1], 0);
@@ -222,7 +238,6 @@ export function buildScenery(input: SceneryInput): Scenery {
   const wr = Math.round(W / 50) * 50;
   const rng = mulberry32(SCENERY_SEED ^ Math.imul(wr, 0x85ebca6b));
   const roadW = track.roadW;
-  const bandEnd = breakY + 220;
 
   const inRects = (list: Rect[], x: number, y: number, pad: number) =>
     list.some(b => x > b.left - pad && x < b.right + pad && y > b.top - pad && y < b.bottom + pad);
@@ -306,8 +321,8 @@ export function buildScenery(input: SceneryInput): Scenery {
     cove = `${edge}Z`;
   }
 
-  /* ---------- grass patches: soft irregular blobs ---------- */
-  const patches: Scenery['patches'] = [];
+  /* ---------- grass patches: soft irregular blobs (none on the last stretch: it is dusk there) ---------- */
+  const patches: string[] = [];
   const patchCount = Math.min(12, Math.round((W * H) / 460000));
   const patchScale = Math.max(0.45, Math.min(1.15, W / 1440));
   for (let i = 0; i < patchCount; i += 1) {
@@ -318,135 +333,262 @@ export function buildScenery(input: SceneryInput): Scenery {
     const a = rng() * 6.28;
     const b = rng() * 6.28;
     const c = rng() * 6.28;
-    // Not across the seam between the map and its last stretch.
-    if (cy + ry * 1.3 > breakY && cy - ry * 1.3 < bandEnd) continue;
-    patches.push({ d: blob(cx, cy, rx, ry, a, b, c), tail: cy > breakY });
+    if (cy + ry * 1.3 > breakY) continue;
+    patches.push(blob(cx, cy, rx, ry, a, b, c));
   }
 
-  /* ---------- cliff: a filled step that tapers at both ends, open where the road crosses ---------- */
+  /* ---------- cliff: a step on ONE side of the road, its face thinning to nothing before the kerb ---------- */
   let cliff: Scenery['cliff'] = null;
   const c1 = rng() * 6.28;
-  const cliffTilt = rng() < 0.5 ? -0.06 : 0.06;
-  const cliffThick = desktop ? 26 : 18;
+  const cliffTilt = rng() < 0.5 ? -0.035 : 0.035;
+  const cliffDeep = desktop ? 62 * Math.min(unit, 1.15) : phone ? 34 : 46;
+  const roadXAt = (y: number) => track.at(track.lenAtY(y)).x;
+  /** 0 beside the road (from 40 px before the kerb), 1 away from it: the face thins out, never a square cut. */
+  const cliffTaper = (x: number, top: number) =>
+    smooth((Math.min(track.distance(x, top), track.distance(x, top + cliffDeep / 2), track.distance(x, top + cliffDeep)) - (roadW / 2 + 45)) / 80);
   let cliffY = 0;
-  let cliffA = 0;
-  let cliffB = 0;
+  let cliffSide = 1;
   {
-    // Where it shows most: a height (25–40% of the map) and a side with few cards over it.
-    let top = -Infinity;
-    for (let y = H * 0.25; y <= H * 0.4 && y < breakY - 120; y += 24) {
-      for (const [a, b] of [
-        [-20, W * 0.62],
-        [W * 0.38, W + 20]
-      ]) {
+    // Where it shows most: a height (22–40% of the map) and a side of the road with a long open run.
+    let top = 150;
+    for (let y = H * 0.22; y <= H * 0.4 && y < breakY - 160; y += 24) {
+      const mid = y + cliffDeep / 2;
+      const rx = roadXAt(mid);
+      for (const side of [-1, 1]) {
         let open = 0;
-        for (let i = 1; i <= 9; i += 1) if (!inCard(a + ((b - a) * i) / 10, y, 8)) open += 1;
-        const fit = open - Math.abs(y / H - 0.33) * 6;
+        for (let x = side < 0 ? -20 : rx; x <= (side < 0 ? rx : W + 20); x += 24) {
+          if (inCard(x, mid, cliffDeep / 2 + 16) || inRects(calm, x, mid, cliffDeep / 2 + 20) || inSand(Math.max(0, x), Math.max(0, mid - cliffDeep))) {
+            continue;
+          }
+          // Counts for as much as the face is deep there.
+          open += 24 * cliffTaper(x, y);
+        }
+        const fit = open - Math.abs(y / H - 0.31) * 1800;
         if (fit > top) {
           top = fit;
           cliffY = y;
-          cliffA = a;
-          cliffB = b;
+          cliffSide = side;
         }
       }
     }
   }
-  const cliffTop = (x: number) =>
-    cliffY + cliffTilt * (x - (cliffA + cliffB) / 2) + 12 * Math.sin(x / 120 + c1) + 5 * Math.sin(x / 47 + p1);
-  const cliffDepth = (x: number) => {
-    const u = (x - cliffA) / (cliffB - cliffA);
-    return u <= 0 || u >= 1 ? 0 : cliffThick * Math.pow(Math.sin(Math.PI * u), 0.6);
-  };
+  const cliffLine = (x: number) => cliffY + cliffTilt * (x - W / 2) + 11 * Math.sin(x / 120 + c1) + 5 * Math.sin(x / 47 + p1);
+  // Top edge and depth of the face, sampled every 8 px across the page.
+  const CS = 8;
+  const cliffN = Math.ceil((W + 48) / CS) + 1;
+  const cliffTops = new Float32Array(cliffN);
+  const cliffDepths = new Float32Array(cliffN);
   if (cliffY > 0) {
-    let face = '';
-    let lip = '';
-    let upper: number[] = [];
-    let lower: number[] = [];
-    const close = () => {
-      if (upper.length >= 6) {
-        const back: number[] = [];
-        for (let i = lower.length - 2; i >= 0; i -= 2) back.push(lower[i], lower[i + 1]);
-        face += `${polyline(upper)}${polyline(back).replace('M', 'L')}Z`;
-        lip += polyline(upper);
-      }
-      upper = [];
-      lower = [];
+    for (let i = 0; i < cliffN; i += 1) {
+      const x = -24 + i * CS;
+      const top = cliffLine(x);
+      cliffTops[i] = top;
+      const mid = top + cliffDeep / 2;
+      if ((x - roadXAt(mid)) * cliffSide <= 0) continue;
+      cliffDepths[i] = cliffDeep * cliffTaper(x, top) * (0.86 + 0.14 * Math.sin(x / 70 + c1 * 2));
+    }
+    const back = (points: number[]) => {
+      const out: number[] = [];
+      for (let i = points.length - 2; i >= 0; i -= 2) out.push(points[i], points[i + 1]);
+      return polyline(out).replace('M', 'L');
     };
-    for (let x = cliffA; x <= cliffB; x += 8) {
-      const depth = cliffDepth(x);
-      const top = cliffTop(x);
-      if (depth < 2 || track.distance(x, top + depth / 2) < roadW / 2 + 12) {
+    let face = '';
+    let foot = '';
+    let strata = '';
+    let lip = '';
+    let up: number[] = [];
+    let low: number[] = [];
+    let band: number[] = [];
+    let seam: number[] = [];
+    const closeSeam = () => {
+      if (seam.length >= 6) strata += polyline(seam);
+      seam = [];
+    };
+    const close = () => {
+      if (up.length >= 8) {
+        face += `${polyline(up)}${back(low)}Z`;
+        foot += `${polyline(band)}${back(low)}Z`;
+        lip += polyline(up);
+      }
+      closeSeam();
+      up = [];
+      low = [];
+      band = [];
+    };
+    for (let i = 0; i < cliffN; i += 1) {
+      const depth = cliffDepths[i];
+      if (depth < 3) {
         close();
         continue;
       }
-      upper.push(x, top);
-      // Scalloped foot of the step.
-      lower.push(x, top + depth + 3 * Math.abs(Math.sin(x / 14)));
+      const x = -24 + i * CS;
+      const top = cliffTops[i];
+      up.push(x, top);
+      // Scalloped foot of the step; the darker band along it is the shaded bottom of the face.
+      low.push(x, top + depth + 3 * Math.abs(Math.sin(x / 15)));
+      band.push(x, top + depth * 0.66 + 2 * Math.sin(x / 23 + c1));
+      if (depth > 24) seam.push(x, top + depth * 0.34 + 2.5 * Math.sin(x / 31 + c1));
+      else closeSeam();
     }
     close();
-    if (face) cliff = { face, lip };
+    if (face) cliff = { face, foot, strata, lip };
   }
   const cliffHit = (x: number, y: number, pad: number) => {
-    if (!cliff || x < cliffA - pad || x > cliffB + pad) return false;
-    const top = cliffTop(x);
-    return y > top - pad && y < top + cliffDepth(x) + 10 + pad;
+    if (!cliff) return false;
+    const at = Math.round((x + 24) / CS);
+    const reach = Math.ceil(pad / CS);
+    for (let i = Math.max(0, at - reach); i <= Math.min(cliffN - 1, at + reach); i += 1) {
+      const depth = cliffDepths[i];
+      if (depth >= 3 && y > cliffTops[i] - 5 - pad && y < cliffTops[i] + depth + 14 + pad) return true;
+    }
+    return false;
   };
 
-  /* ---------- stream that crosses the page under a wooden bridge ---------- */
+  /* ---------- stream: winds across the page with a diagonal drift, under a wooden bridge ---------- */
   let river: Scenery['river'] = null;
   let bridge: Scenery['bridge'] = null;
-  const riverW = W >= 768 ? 34 : 22;
+  const riverBase = desktop ? clamp(50 * unit, 46, 60) : W >= 768 ? 36 : 22;
   const riverLo = H * 0.66;
   const riverHi = Math.min(H * 0.9, breakY - 90);
   const r1 = rng() * 6.28;
   const r2 = rng() * 6.28;
-  const riverWave = (t: number) => 14 * Math.sin(t / 170 + r1) + 7 * Math.sin(t / 67 + r2);
-  let riverX = 0;
-  let riverY = 0;
-  let riverUx = 1;
-  let riverUy = 0;
+  const r3 = rng() * 6.28;
+  const driftSign = rng() < 0.5 ? -1 : 1;
+  const riverAmp = clamp(W * 0.078, 24, 122);
+  const riverLam = clamp(W * 0.07, 58, 104);
+  interface RiverPoint {
+    t: number;
+    x: number;
+    y: number;
+    /** Width of the water there. */
+    w: number;
+  }
+  let riverPts: RiverPoint[] = [];
+  let riverTop = Infinity;
+  let riverBottom = -Infinity;
   {
     // The crossing: where the road runs down the page, in the open (not beside or behind a card).
-    let lowest = Infinity;
-    let crossAngle = 90;
+    const crossings: { x: number; y: number; angle: number; cost: number }[] = [];
     for (let y = riverLo; y <= riverHi; y += 12) {
       const point = track.at(track.lenAtY(y));
       const lean = Math.abs(Math.cos((point.angle * Math.PI) / 180));
-      if (lean > 0.6 || inCard(point.x, y, roadW / 2 + 8)) continue;
-      const cost = lean + Math.abs(y / H - 0.78) * 1.5;
-      if (cost < lowest) {
-        lowest = cost;
-        riverY = y;
-        riverX = point.x;
-        crossAngle = point.angle;
-      }
+      if (lean > 0.5 || inCard(point.x, y, roadW / 2 + 8)) continue;
+      crossings.push({ x: point.x, y, angle: point.angle, cost: lean + Math.abs(y / H - 0.78) * 1.5 });
     }
-    if (lowest < Infinity) {
-      // The stream leans a little, towards square with the road (at most 12°).
-      let lean = clamp(((crossAngle - 90) * Math.PI) / 180, -0.21, 0.21);
-      const reach = Math.max(riverX, W - riverX) * Math.abs(Math.tan(lean)) + 40;
-      if (riverY - reach < riverLo - 60 || riverY + reach > breakY - 50) lean = 0;
-      riverUx = Math.cos(lean);
-      riverUy = Math.sin(lean);
-      const shift = riverWave(0);
-      const points: number[] = [];
-      const far = W / riverUx + 60;
-      for (let t = -far; t <= far; t += 30) {
-        const off = riverWave(t) - shift;
-        points.push(riverX + riverUx * t - riverUy * off, riverY + riverUy * t + riverUx * off);
+    crossings.sort((a, b) => a.cost - b.cost);
+    // Centre line: a straight axis through the crossing (leaning `lean`), plus a wave that is
+    // flat at the crossing itself, so the bridge sits square on the water.
+    const trace = (cross: { x: number; y: number }, lean: number, amp: number) => {
+      const ux = Math.cos(lean);
+      const uy = Math.sin(lean);
+      const wave = (t: number) => amp * (0.8 * Math.sin(t / riverLam + r1) + 0.2 * Math.sin(t / (riverLam * 0.45) + r2));
+      const still = wave(0);
+      const points: RiverPoint[] = [];
+      const from = Math.floor((-70 - cross.x) / ux / 14) * 14;
+      for (let t = from; t <= (W + 70 - cross.x) / ux + 14; t += 14) {
+        const off = (wave(t) - still) * smooth(Math.abs(t) / 170);
+        points.push({
+          t,
+          x: cross.x + ux * t - uy * off,
+          y: cross.y + uy * t + ux * off,
+          w: riverBase * (1 + 0.2 * Math.sin(t / 140 + r3))
+        });
       }
-      river = { d: polyline(points), width: riverW };
-      const roadRad = (crossAngle * Math.PI) / 180;
-      const square = Math.abs(Math.sin(roadRad - lean));
-      bridge = { x: riverX, y: riverY, angle: crossAngle - 90, w: roadW + 12, len: Math.min(130, (riverW + 22) / Math.max(0.5, square)) };
+      return points;
+    };
+    // It crosses the road once (at the bridge), keeps clear of it elsewhere and stays in its zone.
+    const fits = (points: RiverPoint[]) =>
+      points.every(point => {
+        if (point.x < -20 || point.x > W + 20) return true;
+        if (point.y < H * 0.6 || point.y > breakY - 44 - point.w / 2) return false;
+        if (Math.abs(point.t) < 80 || inCard(point.x, point.y, 0)) return true;
+        return track.distance(point.x, point.y) > roadW / 2 + 5 + point.w / 2 + 14;
+      });
+    const baseLean = (angle: number) => clamp(((angle - 90) * Math.PI) / 180, -0.21, 0.21);
+    const search = () => {
+      // Widest winding first; a smaller wave only when the wide one does not fit anywhere.
+      for (const scale of [1, 0.85, 0.7, 0.55, 0.4, 0.28]) {
+        for (const cross of crossings) {
+          const base = baseLean(cross.angle);
+          // A road running straight down: lean the stream anyway, for the diagonal drift.
+          const leans = Math.abs(base) < 0.1 ? [driftSign * 0.17, -driftSign * 0.17, base] : [base];
+          for (const lean of leans) {
+            const points = trace(cross, lean, riverAmp * scale);
+            if (fits(points)) return { cross, lean, points };
+          }
+        }
+      }
+      const cross = crossings[0];
+      return cross ? { cross, lean: 0, points: trace(cross, 0, 14) } : null;
+    };
+    const found = search();
+    if (found) {
+      const { cross, lean, points } = found;
+      riverPts = points;
+      const left: number[] = [];
+      const right: number[] = [];
+      const centre: number[] = [];
+      const flowA: number[] = [];
+      const flowB: number[] = [];
+      let stones = '';
+      let nextStone = 2;
+      const width0 = riverBase * (1 + 0.2 * Math.sin(r3));
+      const square = Math.abs(Math.sin((cross.angle * Math.PI) / 180 - lean));
+      const deck = Math.min(150, (width0 + 26) / Math.max(0.55, square));
+      points.forEach((point, index) => {
+        const a = points[Math.max(0, index - 1)];
+        const b = points[Math.min(points.length - 1, index + 1)];
+        const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const nx = -(b.y - a.y) / d;
+        const ny = (b.x - a.x) / d;
+        const half = point.w / 2;
+        left.push(point.x + nx * half, point.y + ny * half);
+        right.push(point.x - nx * half, point.y - ny * half);
+        centre.push(point.x, point.y);
+        flowA.push(point.x + nx * half * 0.46, point.y + ny * half * 0.46);
+        flowB.push(point.x - nx * half * 0.4, point.y - ny * half * 0.4);
+        riverTop = Math.min(riverTop, point.y - half);
+        riverBottom = Math.max(riverBottom, point.y + half);
+        // Stones on the banks, a few at a time.
+        if (index >= nextStone) {
+          const side = rng() < 0.5 ? -1 : 1;
+          const r = (phone ? 2.6 : 3.6) + rng() * 4;
+          const turn = rng() * 6.28;
+          nextStone = index + 3 + Math.floor(rng() * 5);
+          const sx = point.x + nx * side * (half + 1);
+          const sy = point.y + ny * side * (half + 1);
+          if (Math.abs(point.t) > deck / 2 + 14 && sx > -10 && sx < W + 10 && !inCard(sx, sy, -6)) {
+            const corners: number[] = [];
+            for (let k = 0; k < 6; k += 1) {
+              const angle = turn + (k / 6) * 6.28;
+              const reach = r * (0.75 + 0.5 * Math.abs(Math.sin(k * 2.1 + turn)));
+              corners.push(sx + Math.cos(angle) * reach, sy + Math.sin(angle) * reach);
+            }
+            stones += `${polyline(corners)}Z`;
+          }
+        }
+      });
+      const back: number[] = [];
+      for (let i = right.length - 2; i >= 0; i -= 2) back.push(right[i], right[i + 1]);
+      river = {
+        water: `${polyline(left)}${polyline(back).replace('M', 'L')}Z`,
+        deep: polyline(centre),
+        deepWidth: riverBase * 0.38,
+        flow: polyline(flowA) + polyline(flowB),
+        stones
+      };
+      bridge = { x: cross.x, y: cross.y, angle: cross.angle - 90, w: roadW + 12, len: deck };
     }
   }
-  const riverDist = (x: number, y: number) => {
-    if (!river) return Infinity;
-    const dx = x - riverX;
-    const dy = y - riverY;
-    const t = dx * riverUx + dy * riverUy;
-    return Math.abs(-dx * riverUy + dy * riverUx - (riverWave(t) - riverWave(0)));
+  /** Distance from a point to the water's edge (negative in the water). */
+  const riverGap = (x: number, y: number) => {
+    if (!river || y < riverTop - 90 || y > riverBottom + 90) return Infinity;
+    let nearest = Infinity;
+    for (const point of riverPts) {
+      const d = Math.hypot(point.x - x, point.y - y) - point.w / 2;
+      if (d < nearest) nearest = d;
+    }
+    return nearest;
   };
 
   /* ---------- grandstand beside the straight, just past the finish line ---------- */
@@ -454,15 +596,41 @@ export function buildScenery(input: SceneryInput): Scenery {
   const standW = W >= 768 ? 30 : 18;
   const stand = { x: W / 2 + roadW / 2 + (W >= 768 ? 30 : 24), y: track.finishY + 22, w: standW, h: standH };
 
-  /* ---------- first stars, in the last 400 px before the finish ---------- */
-  const starBands = ['', '', ''];
-  for (let i = 0; i < 27; i += 1) {
-    const up = rng() * 400;
-    const x = rng() * W;
-    const r = 0.8 + rng() * 0.9;
-    starBands[Math.min(2, Math.floor(up / 134))] += circlePath(x, track.finishY - up, r);
+  /* ---------- crescent moon past the finish, and the first stars of the night ---------- */
+  const moon = {
+    x: W / 2 + clamp(W * 0.27, 104, 430),
+    y: track.finishY + (W >= 768 ? 104 : 86),
+    r: clamp(25 * unit, 15, 32)
+  };
+  // 26 in the last 400 px before the finish (brighter towards it), 10 more around the moon.
+  const starBands = ['', '', '', ''];
+  const starSpot = (x: number, y: number) =>
+    !inCard(x, y, 6) &&
+    track.distance(x, y) > roadW / 2 + 12 &&
+    !(x > stand.x - 6 && x < stand.x + stand.w + 6 && y > stand.y - 6 && y < stand.y + stand.h + 6) &&
+    Math.hypot(x - moon.x, y - moon.y) > moon.r * 1.9;
+  const starShape = (x: number, y: number, r: number, sparkle: boolean) => {
+    if (!sparkle) return circlePath(x, y, r);
+    const long = r * 2.6;
+    const short = r * 0.62;
+    return `M${fmt(x)} ${fmt(y - long)}L${fmt(x + short)} ${fmt(y - short)}L${fmt(x + long)} ${fmt(y)}L${fmt(x + short)} ${fmt(y + short)}L${fmt(x)} ${fmt(y + long)}L${fmt(x - short)} ${fmt(y + short)}L${fmt(x - long)} ${fmt(y)}L${fmt(x - short)} ${fmt(y - short)}Z`;
+  };
+  for (const [wanted, below] of [
+    [26, false],
+    [10, true]
+  ] as const) {
+    let placed = 0;
+    for (let tries = 0; tries < 400 && placed < wanted; tries += 1) {
+      const up = rng() * (below ? ROAD_TAIL - 50 : 400);
+      const x = 10 + rng() * (W - 20);
+      const size = rng();
+      const y = below ? track.finishY + 16 + up : track.finishY - up;
+      if (!starSpot(x, y)) continue;
+      placed += 1;
+      starBands[below ? 3 : Math.min(2, Math.floor(up / 134))] += starShape(x, y, 1.2 + size * 1.2, size > 0.76);
+    }
   }
-  const stars = starBands.map((d, index) => ({ d, o: [0.85, 0.55, 0.28][index] })).filter(star => star.d);
+  const stars = starBands.map((d, index) => ({ d, o: [0.95, 0.75, 0.5, 1][index] })).filter(star => star.d);
 
   /* ---------- placed pieces ---------- */
   const cell = 90;
@@ -494,7 +662,30 @@ export function buildScenery(input: SceneryInput): Scenery {
     else buckets.set(key, [piece]);
   };
 
-  /* ---------- village: plaza with the church, streets, rows of houses, fences along the plots ---------- */
+  /** Inside the village fence (set once the village is laid out)? */
+  let villageHit: (x: number, y: number, pad: number) => boolean = () => false;
+  /** Hedge bushes along the road: x, y, radius triples. */
+  const hedgeDots: number[] = [];
+
+  /** Room for a piece of this footprint at (x, y)? */
+  const free = (x: number, y: number, rad: number) => {
+    if (y > limitY) return false;
+    if (inCard(x, y, desktop ? 16 + rad * 0.75 : phone ? 2 : 8 + rad * 0.3)) return false;
+    if (inRects(calm, x, y, (desktop ? 18 : 8) + rad * 0.7)) return false;
+    if (track.distance(x, y) < roadW / 2 + 10 + rad * 0.85) return false;
+    if (riverGap(x, y) < 8 + rad * 0.75) return false;
+    if (cliffHit(x, y, rad * 0.6 + 4)) return false;
+    if (x > stand.x - rad && x < stand.x + stand.w + rad && y > stand.y - rad && y < stand.y + stand.h + rad) return false;
+    if (Math.hypot(x - moon.x, y - moon.y) < moon.r + rad + 10) return false;
+    if (inCove(x, y, rad * 0.7 + 6) || inSea(x, y, rad * 0.75 + 8)) return false;
+    if (villageHit(x, y, rad * 0.75 + 10)) return false;
+    for (let i = 0; i < hedgeDots.length; i += 3) {
+      if (Math.hypot(hedgeDots[i] - x, hedgeDots[i + 1] - y) < hedgeDots[i + 2] + rad * 0.8) return false;
+    }
+    return true;
+  };
+
+  /* ---------- village: an irregular cluster around a sand plaza, wrapped by a fence ---------- */
   let village: Scenery['village'] = null;
   let villageRect: Rect | null = null;
   if (W >= 600) {
@@ -510,17 +701,15 @@ export function buildScenery(input: SceneryInput): Scenery {
         const x = (i + 0.5) * step;
         const y = y0 + (j + 0.5) * step;
         const busy =
-          inCard(x, y, 14 + step / 2) || track.distance(x, y) < roadW / 2 + 20 + step * 0.7 || cliffHit(x, y, 30) || riverDist(x, y) < riverW + 40
-            ? 1
-            : 0;
+          inCard(x, y, 14 + step / 2) || track.distance(x, y) < roadW / 2 + 20 + step * 0.7 || cliffHit(x, y, 30) || riverGap(x, y) < 46 ? 1 : 0;
         sums[(j + 1) * (cols + 1) + i + 1] = busy + sums[j * (cols + 1) + i + 1] + sums[(j + 1) * (cols + 1) + i] - sums[j * (cols + 1) + i];
       }
     }
     const busyIn = (i0: number, j0: number, i1: number, j1: number) =>
       sums[j1 * (cols + 1) + i1] - sums[j0 * (cols + 1) + i1] - sums[j1 * (cols + 1) + i0] + sums[j0 * (cols + 1) + i0];
     const sizes: [number, number][] = [];
-    for (const hw of desktop ? [340, 280, 225, 175, 130] : [225, 175, 130, 100]) {
-      for (const hh of [132, 114, 100, 88, 78]) sizes.push([hw * unit, hh * unit]);
+    for (const hw of W >= 1440 ? [430, 380, 340, 280, 225, 175, 130] : desktop ? [340, 280, 225, 175, 130] : [225, 175, 130, 100]) {
+      for (const hh of [170, 150, 132, 114, 100, 88, 78]) sizes.push([hw * unit, hh * unit]);
     }
     sizes.sort((a, b) => b[0] * b[1] - a[0] * a[1]);
     for (const [hw, hh] of sizes) {
@@ -543,82 +732,208 @@ export function buildScenery(input: SceneryInput): Scenery {
     }
   }
   if (villageRect) {
+    // Its own number stream: the village does not change when something else on the map does.
+    const vr = mulberry32(SCENERY_SEED ^ 0x7f4a7c15 ^ Math.imul(wr, 0x85ebca6b));
     const { left, right, top, bottom } = villageRect;
     const cx = (left + right) / 2;
     const cy = (top + bottom) / 2;
     const hw = (right - left) / 2;
     const hh = (bottom - top) / 2;
-    const hs = unit * 1.18;
-    const street = 15 * hs;
-    const plazaW = Math.min(hw * 0.36, 104 * hs);
-    const plazaH = Math.min(hh - 8, 82 * hs);
-    const plaza = { left: cx - plazaW, right: cx + plazaW, top: cy - plazaH, bottom: cy + plazaH };
-    // Main street through the plaza, a lane on each side of it.
-    const laneX = plazaW + street / 2 + 3;
-    let streets = `M${fmt(left + 6)} ${fmt(cy)}H${fmt(right - 6)}`;
-    const lanes = hw - laneX > 70 * hs;
-    if (lanes) {
-      streets += `M${fmt(cx - laneX)} ${fmt(top + 8)}V${fmt(bottom - 8)}M${fmt(cx + laneX)} ${fmt(top + 8)}V${fmt(bottom - 8)}`;
-    }
-    add('church', cx, cy - plazaH * 0.12, 1.3 * hs, 0, true);
-    add('flowers', cx - plazaW * 0.62, cy + plazaH * 0.62, hs, 20, true);
-    add('flowers', cx + plazaW * 0.62, cy + plazaH * 0.62, hs, -20, true);
-    add('tree2', cx - plazaW * 0.7, cy - plazaH * 0.62, 0.8 * hs, 0, true);
-    add('tree2', cx + plazaW * 0.7, cy - plazaH * 0.62, 0.8 * hs, 0, true);
+    const hs = unit * 1.16;
+    const street = 13 * hs;
+    // The village is a rounded shape (a superellipse) inside that rectangle: below 1 = inside.
+    const POWER = 2.6;
+    const norm = (x: number, y: number, kx = 1, ky = 1) =>
+      Math.pow(Math.abs(x - cx) / (hw * kx), POWER) + Math.pow(Math.abs(y - cy) / (hh * ky), POWER);
+    const inside = (x: number, y: number, rad: number, limit: number) =>
+      norm(x - rad, y) < limit && norm(x + rad, y) < limit && norm(x, y - rad) < limit && norm(x, y + rad) < limit;
 
-    // Rows of houses facing the street, on both sides of the plaza; a second row behind when it fits.
-    const rowW = 128 * hs;
-    const gap = 10 * hs;
-    const depth = 31 * hs;
-    const inner = lanes ? laneX + street / 2 + 8 * hs : plazaW + 10 * hs;
-    const rowYs: number[] = [];
-    for (let k = 0; k < 2; k += 1) {
-      const offset = street / 2 + 5 * hs + depth / 2 + k * (depth + 9 * hs);
-      if (offset + depth / 2 > hh - 5) break;
-      rowYs.push(-offset, offset);
+    // Sand plaza with the church, a little off square.
+    const plazaRx = Math.min(hw * 0.3, 78 * hs);
+    const plazaRy = Math.min(hh * 0.66, 62 * hs);
+    const plaza = blob(cx, cy, plazaRx / 1.14, plazaRy / 1.14, vr() * 6.28, vr() * 6.28, vr() * 6.28);
+    const churchS = Math.min(1.14 * hs, (plazaRy * 2 + 10) / 74);
+    add('church', cx + (vr() - 0.5) * plazaRx * 0.2, cy + churchS * 6, churchS, (vr() - 0.5) * 16, true);
+    add('flowers', cx - plazaRx * 0.66, cy + plazaRy * 0.5, hs, 20, true);
+    add('flowers', cx + plazaRx * 0.62, cy - plazaRy * 0.52, hs, -30, true);
+    add('tree2', cx - plazaRx * 0.7, cy - plazaRy * 0.5, 0.74 * hs, 0, true);
+    add('tree2', cx + plazaRx * 0.72, cy + plazaRy * 0.5, 0.84 * hs, 0, true);
+
+    // Curved dirt streets out of the plaza, through the fence.
+    const lanePts: number[] = [];
+    let streets = '';
+    const lane = (ax: number, ay: number, qx: number, qy: number, bx: number, by: number) => {
+      streets += `M${fmt(ax)} ${fmt(ay)}Q${fmt(qx)} ${fmt(qy)} ${fmt(bx)} ${fmt(by)}`;
+      for (let i = 0; i <= 14; i += 1) {
+        const t = i / 14;
+        const u = 1 - t;
+        lanePts.push(u * u * ax + 2 * u * t * qx + t * t * bx, u * u * ay + 2 * u * t * qy + t * t * by);
+      }
+    };
+    const bendA = (vr() - 0.5) * hh * 0.7;
+    const bendB = (vr() - 0.5) * hh * 0.7;
+    const sideUp = vr() < 0.5 ? -1 : 1;
+    lane(cx - plazaRx * 0.5, cy, cx - hw * 0.55, cy + bendA, cx - hw - 12, cy + bendA * 0.5);
+    lane(cx + plazaRx * 0.5, cy, cx + hw * 0.55, cy + bendB, cx + hw + 12, cy + bendB * 0.5);
+    lane(cx + sideUp * plazaRx * 0.3, cy - plazaRy * 0.4, cx + sideUp * hw * 0.16, cy - hh * 0.7, cx + sideUp * hw * 0.34, cy - hh - 10);
+    lane(cx - sideUp * plazaRx * 0.3, cy + plazaRy * 0.4, cx - sideUp * hw * 0.2, cy + hh * 0.7, cx - sideUp * hw * 0.4, cy + hh + 10);
+    const offLanes = (x: number, y: number, gap: number) => {
+      for (let i = 0; i < lanePts.length; i += 2) {
+        if (Math.hypot(lanePts[i] - x, lanePts[i + 1] - y) < gap) return false;
+      }
+      return true;
+    };
+    const offPlaza = (x: number, y: number, rad: number) =>
+      Math.pow((x - cx) / (plazaRx + rad), 2) + Math.pow((y - cy) / (plazaRy + rad), 2) > 1;
+
+    // The fence wraps the whole cluster, with a slight wobble.
+    const f1 = vr() * 6.28;
+    const f2 = vr() * 6.28;
+    const ring: number[] = [];
+    for (let i = 0; i < 56; i += 1) {
+      const theta = (i / 56) * Math.PI * 2;
+      const ct = Math.cos(theta);
+      const st = Math.sin(theta);
+      const k = 0.955 + 0.028 * Math.sin(theta * 3 + f1) + 0.017 * Math.sin(theta * 5 + f2);
+      ring.push(
+        cx + hw * k * Math.sign(ct) * Math.pow(Math.abs(ct), 2 / POWER),
+        cy + hh * k * Math.sign(st) * Math.pow(Math.abs(st), 2 / POWER)
+      );
     }
-    let fence = '';
-    for (const side of [-1, 1]) {
-      const from = side < 0 ? left + 9 : cx + inner;
-      const to = side < 0 ? cx - inner : right - 9;
-      const room = to - from;
-      const count = Math.floor((room + gap) / (rowW + gap));
-      const rest = room - count * rowW - Math.max(0, count - 1) * gap;
-      const single = rest >= 48 * hs + gap;
-      const used = count * rowW + Math.max(0, count - 1) * gap + (single ? 40 * hs + gap : 0);
-      const x = from + (room - used) / 2;
-      rowYs.forEach((dy, index) => {
-        let at = x;
-        for (let n = 0; n < count; n += 1) {
-          add((n + index) % 2 ? 'row-h2' : 'row-h', at + rowW / 2, cy + dy, hs, 0, true);
-          at += rowW + gap;
+    const fence = `${polyline(ring)}Z`;
+
+    // Houses: thrown at random inside the fence, each with its own size and a few degrees of
+    // turn, long side towards the plaza. Not on the plaza, not on a street, not on each other.
+    const houseCap = W >= 1440 ? 30 : desktop ? 22 : 12;
+    let houses = 0;
+    for (let i = 0; i < 1100 && houses < houseCap; i += 1) {
+      const x = cx + (vr() * 2 - 1) * hw;
+      const y = cy + (vr() * 2 - 1) * hh;
+      const kind = vr();
+      const size = vr();
+      const turn = vr();
+      const id: PieceId = kind < 0.3 ? 'house-sq' : Math.abs(x - cx) / hw > Math.abs(y - cy) / hh ? 'house-v' : 'house';
+      const s = hs * (0.8 + 0.66 * size * size);
+      const rad = FOOT[id] * s;
+      if (!inside(x, y, rad * 0.9, 0.8) || !offPlaza(x, y, rad * 0.9) || !offLanes(x, y, street / 2 + rad * 0.82)) continue;
+      if (crowded(x, y, rad, 0.9)) continue;
+      add(id, x, y, s, (turn - 0.5) * 28, true);
+      houses += 1;
+    }
+    // Trees, bushes and vegetable gardens in the lots between them.
+    const lotMix: Mix = [['garden', 34], ['tree2', 26], ['bush', 22], ['flowers', 12], ['tree', 6]];
+    let lots = 0;
+    for (let i = 0; i < 260 && lots < Math.round(houses * 0.6) + 3; i += 1) {
+      const x = cx + (vr() * 2 - 1) * hw;
+      const y = cy + (vr() * 2 - 1) * hh;
+      const id = pick(lotMix, vr());
+      const size = vr();
+      const turn = vr();
+      const s = hs * (id === 'garden' ? 0.9 + size * 0.5 : 0.62 + size * 0.34);
+      const rad = FOOT[id] * s;
+      if (!inside(x, y, rad, 0.86) || !offPlaza(x, y, rad * 0.6) || !offLanes(x, y, street / 2 + rad * 0.7)) continue;
+      if (crowded(x, y, rad, 0.9)) continue;
+      add(id, x, y, s, id === 'garden' ? (turn < 0.5 ? 0 : 90) + (size - 0.5) * 24 : id === 'flowers' ? turn * 90 : 0, true);
+      lots += 1;
+    }
+    village = { plaza, streets, streetWidth: street, fence };
+    villageHit = (x, y, pad) => norm(x, y, 1 + pad / hw, 1 + pad / hh) < 1;
+
+    // Outskirts: a few more houses outside the fence, in whatever free ground lies next to the
+    // village. On wide screens (>= 1440 px) they reach well into the free margin.
+    const spillX = (W >= 1440 ? 210 : desktop ? 90 : 50) * unit;
+    const spillY = (W >= 1440 ? 280 : desktop ? 110 : 60) * unit;
+    const kx = 1 + spillX / hw;
+    const ky = 1 + spillY / hh;
+    const outCap = W >= 1440 ? 14 : desktop ? 6 : 3;
+    let out = 0;
+    for (let i = 0; i < 520 && out < outCap; i += 1) {
+      const x = cx + (vr() * 2 - 1) * hw * kx;
+      const y = cy + (vr() * 2 - 1) * hh * ky;
+      const kind = vr();
+      const size = vr();
+      const turn = vr();
+      const keep = vr();
+      const id: PieceId = kind < 0.34 ? 'house-sq' : kind < 0.67 ? 'house-v' : 'house';
+      const s = hs * (0.76 + 0.44 * size);
+      const rad = FOOT[id] * s;
+      const reach = norm(x, y, kx, ky);
+      if (reach > 1 || keep < reach * 0.55 || y > breakY - 60 || inSand(x, y)) continue;
+      if (!free(x, y, rad * 1.15) || crowded(x, y, rad, 1.25)) continue;
+      add(id, x, y, s, (turn - 0.5) * 28, true);
+      out += 1;
+    }
+  }
+
+  /* ---------- hedges: rows of clipped bushes along the road, in places ---------- */
+  let hedges = '';
+  {
+    const size = desktop ? 7.5 * Math.min(unit, 1.15) : phone ? 5 : 6.5;
+    const offset = roadW / 2 + 9 + size;
+    const first = track.gridLead + 110;
+    const room = track.lenAtY(breakY - 40) - first - 300;
+    const count = room > 300 ? clamp(Math.round(room / 520), 2, 10) : 0;
+    for (let i = 0; i < count; i += 1) {
+      const start = first + ((i + rng() * 0.7) / count) * room;
+      const length = 120 + rng() * 170;
+      const side = rng() < 0.5 ? -1 : 1;
+      const phase = rng() * 6.28;
+      const dots: number[] = [];
+      for (let s = start; s <= start + length; s += size * 1.45) {
+        const p = track.at(s);
+        const a = (p.angle * Math.PI) / 180;
+        const x = p.x - Math.sin(a) * side * offset;
+        const y = p.y + Math.cos(a) * side * offset;
+        if (
+          x < 6 ||
+          x > W - 6 ||
+          inCard(x, y, size + 12) ||
+          inRects(calm, x, y, size + 8) ||
+          inSand(x, y) ||
+          inSea(x, y, size + 6) ||
+          inCove(x, y, size + 6) ||
+          riverGap(x, y) < size + 14 ||
+          cliffHit(x, y, size + 4) ||
+          villageHit(x, y, size + 6)
+        ) {
+          dots.length = 0;
+          break;
         }
-        if (single) add(index % 2 ? 'house' : 'house-sq', at + 20 * hs, cy + dy, hs, 0, true);
-      });
-      // Fence along the back of the plots and around the outer end.
-      const outer = side < 0 ? left + 3 : right - 3;
-      const innerX = side < 0 ? to + 4 : from - 4;
-      if (count > 0 || single) {
-        fence += `M${fmt(innerX)} ${fmt(top + 3)}H${fmt(outer)}V${fmt(cy - street)}M${fmt(outer)} ${fmt(cy + street)}V${fmt(bottom - 3)}H${fmt(innerX)}`;
+        dots.push(x, y, size * (0.86 + 0.2 * Math.abs(Math.sin(s / 9 + phase))));
+      }
+      for (let k = 0; k < dots.length; k += 3) {
+        hedges += circlePath(dots[k], dots[k + 1], dots[k + 2]);
+        hedgeDots.push(dots[k], dots[k + 1], dots[k + 2]);
       }
     }
-    village = { plaza, radius: Math.min(plazaW, plazaH) * 0.55, streets, streetWidth: street, fence };
   }
-  const inVillage = (x: number, y: number, pad: number) => villageRect !== null && inRects([villageRect], x, y, pad);
 
-  /** Room for a piece of this footprint at (x, y)? */
-  const free = (x: number, y: number, rad: number) => {
-    if (y > limitY) return false;
-    if (inCard(x, y, desktop ? 16 + rad * 0.75 : phone ? 2 : 8 + rad * 0.3)) return false;
-    if (inRects(calm, x, y, (desktop ? 18 : 8) + rad * 0.7)) return false;
-    if (track.distance(x, y) < roadW / 2 + 10 + rad * 0.85) return false;
-    if (riverDist(x, y) < riverW / 2 + 8 + rad * 0.75) return false;
-    if (cliffHit(x, y, rad * 0.6 + 4)) return false;
-    if (x > stand.x - rad && x < stand.x + stand.w + rad && y > stand.y - rad && y < stand.y + stand.h + rad) return false;
-    if (inCove(x, y, rad * 0.7 + 6) || inSea(x, y, rad * 0.75 + 8)) return false;
-    if (inVillage(x, y, rad * 0.75 + 10)) return false;
-    return true;
-  };
+  /* ---------- clearings: open ground with no trees; in the fields zones, a crop field in the middle ---------- */
+  const clearings: { x: number; y: number; r: number; a: number }[] = [];
+  {
+    const count = clamp(Math.round((W * H) / 760000), 2, 10);
+    for (let i = 0; i < count; i += 1) {
+      const x = rng() * W;
+      const y = H * 0.2 + rng() * Math.max(1, limitY - H * 0.2);
+      const r = (92 + rng() * 76) * unit * (phone ? 0.62 : 1);
+      const a = rng() * 6.28;
+      const kind = rng();
+      const size = rng();
+      const turn = rng();
+      if (inSand(x, y)) continue;
+      clearings.push({ x, y, r, a });
+      // Crop fields read as wooden pallets at this scale: clearings stay as open grass.
+      void kind;
+      void size;
+      void turn;
+    }
+  }
+  const inClearing = (x: number, y: number, rad: number) =>
+    clearings.some(c => {
+      const dx = x - c.x;
+      const dy = y - c.y;
+      return Math.hypot(dx, dy) < c.r * (1 + 0.16 * Math.sin(Math.atan2(dy, dx) * 3 + c.a)) + rad * 0.4;
+    });
 
   // Boats out on the water.
   for (const u of [0.16, 0.74]) {
@@ -643,21 +958,24 @@ export function buildScenery(input: SceneryInput): Scenery {
     add(id, px, py, s);
   }
 
-  // A few rocks at the foot of the cliff.
+  // Fallen rocks along the foot of the cliff.
   if (cliff) {
-    for (let i = 0; i < 6; i += 1) {
+    for (let x = -10 + rng() * 40; x < W + 10; ) {
       const u = rng();
       const v = rng();
-      const x = cliffA + (cliffB - cliffA) * (0.14 + i * 0.13 + u * 0.05);
-      const s = unit * (1 + v * 0.5);
-      const id: PieceId = v < 0.5 ? 'rock' : 'rock2';
-      const y = cliffTop(x) + cliffDepth(x) + 12 + FOOT[id] * s * 0.6;
-      if (cliffDepth(x) < 8 || inCard(x, y, 6) || track.distance(x, y) < roadW / 2 + 20 || crowded(x, y, FOOT[id] * s, 1)) continue;
-      add(id, x, y, s);
+      const s = unit * (0.9 + v * 0.8);
+      const id: PieceId = u < 0.5 ? 'rock' : 'rock2';
+      const at = clamp(Math.round((x + 24) / CS), 0, cliffN - 1);
+      const depth = cliffDepths[at];
+      const y = cliffTops[at] + depth + 9 + FOOT[id] * s * 0.45;
+      if (depth > cliffDeep * 0.45 && !inCard(x, y, 6) && track.distance(x, y) > roadW / 2 + 20 && !crowded(x, y, FOOT[id] * s, 0.8)) {
+        add(id, x, y, s, 0, true);
+      }
+      x += (48 + u * 74) * unit;
     }
   }
 
-  // Groves and woods first, then single pieces in the room that is left.
+  // Big single trees, groves and woods first, then single pieces in the room that is left.
   const bands = Math.ceil(limitY / BAND);
   for (let band = 0; band < bands; band += 1) {
     const bandRng = mulberry32(SCENERY_SEED ^ Math.imul(band + 1, 0x9e3779b1) ^ Math.imul(wr, 0x85ebca6b));
@@ -678,8 +996,11 @@ export function buildScenery(input: SceneryInput): Scenery {
         const zoneGap = (big ? zone.bigGap : zone.smallGap) * unit;
         if (w > (gap * gap) / (zoneGap * zoneGap)) continue;
         const id = pick(big ? zone.big : zone.small, u);
-        const s = unit * (0.9 + v * 0.25);
+        // Sizes: single trees from 0.7 to 1.6 (most of them small, a few large), landmark
+        // trees 1 to 1.6, groves 0.8 to 1.3, beach and garden things close to 1.
+        const s = unit * (LANDMARK.has(id) ? 1 + v * 0.6 : big ? 0.8 + v * 0.5 : SINGLE_TREE.has(id) ? 0.7 + 0.9 * v * v : 0.85 + v * 0.35);
         const rad = FOOT[id] * s;
+        if (inClearing(x, y, rad) && !GROUND_COVER.has(id)) continue;
         if (!free(x, y, rad) || crowded(x, y, rad, zone.pack)) continue;
         add(id, x, y, s, id === 'flowers' ? Math.round(v * 3) * 30 : 0);
       }
@@ -702,7 +1023,27 @@ export function buildScenery(input: SceneryInput): Scenery {
   // Painter's order: pieces lower on the page cover the shadows of the ones above.
   kept.sort((a, b) => a.y - b.y);
 
-  return { sand, wetSand, shallow, sea, seaDeep, foam, foamInner, cove, coveFoam, patches, cliff, village, river, bridge, stand, stars, pieces: kept };
+  return {
+    sand,
+    wetSand,
+    shallow,
+    sea,
+    seaDeep,
+    foam,
+    foamInner,
+    cove,
+    coveFoam,
+    patches,
+    cliff,
+    village,
+    river,
+    bridge,
+    hedges,
+    stand,
+    moon,
+    stars,
+    pieces: kept
+  };
 }
 
 /* ---------- the last stretch of road, in slices that fade one after the other ---------- */
@@ -814,7 +1155,7 @@ export function buildChunks(track: Track, breakLen: number, slices: TailSlice[],
   };
   const tail = pieces.filter(piece => piece.tail);
   for (const piece of tail) {
-    const roof = piece.id.startsWith('house') || piece.id.startsWith('row') || piece.id === 'church';
+    const roof = piece.id.startsWith('house') || piece.id === 'church';
     const count = piece.rad > 34 ? 3 : 1;
     for (let i = 0; i < count && chunks.length < MAX_CHUNKS; i += 1) {
       const x = piece.x + (rng() - 0.5) * piece.rad * 1.3;

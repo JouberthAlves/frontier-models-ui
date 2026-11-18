@@ -5,7 +5,7 @@
  *
  * Two kinds of symbol:
  *  - single pieces (a tree, a palm, a house…), a few shapes each;
- *  - composites (a grove, a patch of woods, a row of houses): several `use` of the single
+ *  - composites (a grove, a patch of woods, a cluster of palms): several `use` of the single
  *    pieces. One placed composite is ONE element in the map but draws 3 to 7 pieces, which is
  *    how the map gets dense without going over the 650-element budget.
  *
@@ -20,6 +20,8 @@ export type PieceId =
   | 'tree2'
   | 'pine'
   | 'dense'
+  | 'oak'
+  | 'oak-d'
   | 'bush'
   | 'house'
   | 'house-v'
@@ -31,6 +33,9 @@ export type PieceId =
   | 'umbrella2'
   | 'boat'
   | 'flowers'
+  | 'garden'
+  | 'field'
+  | 'field2'
   | 'grove-a'
   | 'grove-b'
   | 'grove-c'
@@ -38,10 +43,7 @@ export type PieceId =
   | 'woods-b'
   | 'woods-c'
   | 'palms-a'
-  | 'palms-b'
-  | 'row-h'
-  | 'row-h2'
-  | 'row-v';
+  | 'palms-b';
 
 export interface KitShape {
   tag: 'path' | 'circle' | 'ellipse' | 'rect' | 'use';
@@ -119,6 +121,9 @@ const WEDGES = [0, 90, 180, 270]
   })
   .join('');
 
+/** Plough lines of a crop field. */
+const FURROWS = [-20, -10, 0, 10, 20].map(y => `M-38 ${y}H38`).join('');
+
 type Part = [id: string, x: number, y: number, scale: number];
 
 /** A composite: its parts are listed top to bottom, so the lower ones cover the shadows above. */
@@ -161,6 +166,25 @@ export const KIT: KitSymbol[] = [
       { tag: 'path', d: spikes(9, 21, 12.5, 5, 7), cls: 'mf-shadow' },
       { tag: 'path', d: spikes(9, 21, 12.5), cls: 'mf-tree-deep' },
       { tag: 'path', d: spikes(9, 12, 6.5, -1.5, -2, 0.35), cls: 'mf-tree-2' }
+    ]
+  },
+  // Landmark trees: one wide crown, three tones.
+  {
+    id: 'oak',
+    shapes: [
+      { tag: 'path', d: lump(7, 10, 35, 8, 0.2), cls: 'mf-shadow' },
+      { tag: 'path', d: lump(0, 0, 35, 8, 0.2), cls: 'mf-tree-2' },
+      { tag: 'path', d: lump(-5, -6, 24, 7, 1.1), cls: 'mf-tree' },
+      { tag: 'path', d: lump(-10, -11, 11, 5, 0.4), cls: 'mf-grass-dark' }
+    ]
+  },
+  {
+    id: 'oak-d',
+    shapes: [
+      { tag: 'path', d: lump(7, 10, 36, 9, 0.7), cls: 'mf-shadow' },
+      { tag: 'path', d: lump(0, 0, 36, 9, 0.7), cls: 'mf-tree-deep' },
+      { tag: 'path', d: lump(-5, -6, 25, 7, 0.1), cls: 'mf-tree-2' },
+      { tag: 'path', d: lump(-10, -11, 12, 5, 1.3), cls: 'mf-tree' }
     ]
   },
   {
@@ -285,8 +309,31 @@ export const KIT: KitSymbol[] = [
       { tag: 'path', d: dots([[-4, -3, 1.8], [4, 2, 1.8], [9, 2, 1.6], [-9, 3, 1.6]]), cls: 'mf-wall' }
     ]
   },
+  // Vegetable garden: a small plot of soil with rows of greens.
+  {
+    id: 'garden',
+    shapes: [
+      { tag: 'rect', x: -15, y: -10, width: 30, height: 20, rx: 3, cls: 'mf-soil' },
+      { tag: 'path', d: 'M-11 -5H11M-11 0H11M-11 5H11', cls: 'mf-rows' }
+    ]
+  },
+  // Crop fields (they fill the clearings): green and ripe.
+  {
+    id: 'field',
+    shapes: [
+      { tag: 'rect', x: -46, y: -30, width: 92, height: 60, rx: 8, cls: 'mf-field' },
+      { tag: 'path', d: FURROWS, cls: 'mf-furrows' }
+    ]
+  },
+  {
+    id: 'field2',
+    shapes: [
+      { tag: 'rect', x: -40, y: -34, width: 80, height: 68, rx: 8, cls: 'mf-field-ripe' },
+      { tag: 'path', d: FURROWS, cls: 'mf-furrows mf-furrows--ripe', transform: 'rotate(90) scale(0.98 0.94)' }
+    ]
+  },
 
-  /* ---------- composites: groves, woods, palm clusters, rows of houses ---------- */
+  /* ---------- composites: groves, woods, palm clusters ---------- */
   group('grove-a', [
     ['tree', -32, -16, 1],
     ['tree2', 6, -30, 1.08],
@@ -340,21 +387,6 @@ export const KIT: KitSymbol[] = [
     ['palm', 6, -22, 1.06],
     ['palm', 28, 8, 0.92],
     ['palm2', -8, 20, 0.96]
-  ]),
-  group('row-h', [
-    ['house', -44, 0, 1],
-    ['house-sq', -2, 1, 1],
-    ['house', 40, -1, 1]
-  ]),
-  group('row-h2', [
-    ['house-sq', -45, 1, 1],
-    ['house', -4, 0, 1],
-    ['house-sq', 43, -1, 1]
-  ]),
-  group('row-v', [
-    ['house-v', 0, -44, 1],
-    ['house-sq', 1, -2, 1],
-    ['house-v', 0, 40, 1]
   ])
 ];
 
@@ -366,6 +398,8 @@ export const FOOT: Record<PieceId, number> = {
   tree2: 20,
   pine: 22,
   dense: 26,
+  oak: 38,
+  'oak-d': 39,
   bush: 13,
   house: 24,
   'house-v': 24,
@@ -377,6 +411,9 @@ export const FOOT: Record<PieceId, number> = {
   umbrella2: 14,
   boat: 16,
   flowers: 15,
+  garden: 15,
+  field: 52,
+  field2: 50,
   'grove-a': 62,
   'grove-b': 52,
   'grove-c': 42,
@@ -384,10 +421,7 @@ export const FOOT: Record<PieceId, number> = {
   'woods-b': 58,
   'woods-c': 46,
   'palms-a': 50,
-  'palms-b': 56,
-  'row-h': 66,
-  'row-h2': 66,
-  'row-v': 66
+  'palms-b': 56
 };
 
 /** Elements the kit adds to the map SVG (each symbol and each of its shapes). */

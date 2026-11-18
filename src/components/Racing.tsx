@@ -5,6 +5,7 @@ import DecryptedText from './bits/DecryptedText';
 import SceneViewer from './SceneViewer';
 import ExternalLink from './ExternalLink';
 import { useI18n } from '../i18n/i18n';
+import { promptLabel } from '../data/prompts';
 import { useCompare } from '../context/CompareContext';
 import { racingArena, sceneSrc, type Run } from '../data/archive';
 import { colorOf } from '../data/models';
@@ -233,7 +234,7 @@ function GameCard({ run, index }: { run: Run; index: number }) {
           <h3 className="game__name">
             <DecryptedText text={run.model} animateOn="hover" playKey={echo} tone={colorOf(run)} onCream />
           </h3>
-          <p className="game__prompt">{t.racing.prompt}</p>
+          <p className="game__prompt">{run.prompt ? `Prompt ${promptLabel(run.prompt)}` : t.racing.prompt}</p>
           <div className="game__links">
             {run.liveUrl ? (
               <ExternalLink className="link link--warm" href={run.liveUrl}>

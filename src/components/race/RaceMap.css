@@ -97,6 +97,33 @@
 .mf-wood {
   fill: var(--map-wood);
 }
+/* Garden soil and its rows of greens; crop fields (green and ripe) and their plough lines. */
+.mf-soil {
+  fill: color-mix(in oklab, var(--map-sand-2) 62%, var(--map-trunk));
+}
+.mf-rows {
+  fill: none;
+  stroke: var(--map-tree-2);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 5.4;
+}
+.mf-field {
+  fill: color-mix(in oklab, var(--map-grass-2) 55%, var(--map-sand));
+}
+.mf-field-ripe {
+  fill: color-mix(in oklab, var(--map-sand-2) 80%, var(--map-roof));
+}
+.mf-furrows {
+  fill: none;
+  stroke: var(--map-grass-dark);
+  stroke-width: 4;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+.mf-furrows--ripe {
+  stroke: var(--map-sand);
+}
 .mf-ridge {
   fill: var(--map-wall);
   opacity: 0.7;
@@ -155,30 +182,85 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* Cliff: the lit top edge, the shaded band along the foot of the face, a seam in the rock. */
 .rm-cliff-lip {
   fill: none;
   stroke: var(--map-wall);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+.rm-cliff-shadow {
+  fill: rgba(40, 52, 40, 0.24);
+}
+.rm-cliff-foot {
+  fill: color-mix(in oklab, var(--map-sand-2) 62%, var(--map-trunk));
+}
+.rm-cliff-strata {
+  fill: none;
+  stroke: color-mix(in oklab, var(--map-sand-2) 70%, var(--map-trunk));
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.6;
+  stroke-dasharray: 34 16 12 20;
+  opacity: 0.8;
 }
 .rm-street {
   fill: none;
   stroke: var(--map-sand);
   stroke-linecap: round;
 }
+/* Stream: sandy bank (a wide outline of the water shape), water, deeper middle, flow, stones. */
 .rm-river,
 .rm-river-bank {
-  fill: none;
-  stroke-linecap: round;
   stroke-linejoin: round;
 }
 .rm-river {
+  fill: var(--map-water);
   stroke: var(--map-water);
+  stroke-width: 2;
 }
 .rm-river-bank {
+  fill: var(--map-sand-2);
   stroke: var(--map-sand-2);
+  stroke-width: 13;
+}
+.rm-river-deep {
+  fill: none;
+  stroke: var(--map-sea-deep);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.4;
+}
+.rm-river-flow {
+  fill: none;
+  stroke: var(--map-foam);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 15 31;
+  opacity: 0.75;
+}
+.rm-river-stones {
+  fill: var(--map-rock);
+  stroke: rgba(40, 52, 40, 0.18);
+  stroke-width: 1;
+}
+/* Hedges along the road. */
+.rm-hedge {
+  fill: var(--map-tree-2);
+}
+/* Night at the finish: crescent moon and the first stars. */
+.rm-moon {
+  fill: #fff3cf;
+}
+.rm-moon-glow {
+  fill: #fff3cf;
+  opacity: 0.07;
+}
+.rm-star {
+  fill: #fff;
 }
 .rm-rail {
   fill: none;

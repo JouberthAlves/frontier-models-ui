@@ -190,6 +190,13 @@ a {
   --finish-gap: 140px;
 }
 
+@media (min-width: 1100px) {
+  /* Room for a wide last bend into the finish straight (radius of 90 px or more). */
+  .race-scope {
+    --finish-gap: 170px;
+  }
+}
+
 @media (min-width: 1100px) and (max-width: 1299px) {
   /* The road runs down the side margin beside the full-width stage: leave it 72 px. */
   .race-scope {

@@ -179,25 +179,33 @@ function buildWaypoints(input: TrackInput, roadW: number, gridLen: number, endY:
     let keptX = last.x;
     let keptY = last.y;
     let keptK: [number, number] | undefined;
-    for (const back of [0, 40, 80, 120, 160]) {
+    for (const back of [0, 40, 80, 120, 160, 200, 240]) {
       // Start further from the centre (when the lane has the room): more ground to cover, but
       // more of the turn can happen beside the block.
       const x0 = last.x - toCentre * back;
       if (back > 0 && (lastRoom <= 0 || Math.abs(x0 - lastLaneX) > lastRoom)) break;
       const dx = W / 2 - x0;
-      for (const lift of [1, 0.75, 0.5, 0.25, 0, -0.25]) {
+      // Lift above 1: the bend starts higher up beside the block (only while the lane has room).
+      for (const lift of [3, 2.5, 2, 1.5, 1, 0.75, 0.5, 0.25, 0, -0.25]) {
+        if (lift > 1 && lastReach <= 0) continue;
         const y0 = block.bottom - lastReach * lift;
         if (lift !== 1 && (!before || y0 < before.y + 60 || y0 > straightTop - 60)) continue;
         const dy = straightTop - y0;
+        // Moving the start also reshapes the curve that arrives at it: it must not end up tighter.
+        const arriving = before && (back > 0 || lift !== 1) ? widestRadius(x0 - before.x, y0 - before.y) : Infinity;
+        if (arriving <= widest) continue;
         for (let k1 = 0.15; k1 <= 0.96; k1 += 0.05) {
           for (let k2 = 0.15; k2 <= 0.96; k2 += 0.05) {
-            const radius = minRadius(
-              dx,
-              dy,
-              k1,
-              k2,
-              (x, y) => x0 + x > block.left - pad && x0 + x < block.right + pad && y0 + y > block.top - pad && y0 + y < block.bottom + pad,
-              120
+            const radius = Math.min(
+              arriving,
+              minRadius(
+                dx,
+                dy,
+                k1,
+                k2,
+                (x, y) => x0 + x > block.left - pad && x0 + x < block.right + pad && y0 + y > block.top - pad && y0 + y < block.bottom + pad,
+                120
+              )
             );
             if (radius > widest) {
               widest = radius;
@@ -246,6 +254,14 @@ function minRadius(dx: number, dy: number, k1: number, k2: number, blocked?: (x:
   }
   return min;
 }
+/** Widest minimum radius a symmetric curve over (dx, dy) can have (Infinity for a straight). */
+function widestRadius(dx: number, dy: number): number {
+  if (Math.abs(dx) < 0.5) return Infinity;
+  let widest = -1;
+  for (let k = 0.3; k <= 0.971; k += 0.02) widest = Math.max(widest, minRadius(dx, dy, k, k));
+  return widest;
+}
+
 /**
  * The k closest to the usual one (wider crossings use a larger k) that keeps the curve at or
  * above the target radius; when no k reaches it, the k with the widest curve.
@@ -275,6 +291,8 @@ export function buildTrack(input: TrackInput): Track {
   const gridSpan = Math.max(0, input.cars - 1) * CAR_SPACING + 30;
   const gridLead = input.startY + ROAD_LEAD_IN + gridSpan;
   const gridLen = gridSpan + 44;
+  // What the curves aim for. Desktop (>= 1100 px) reaches it. Tablets (768–1099 px) aim for the
+  // same and get the widest curve their 64 px margins and 200 px gaps allow: about 45 px.
   const targetRadius = roadW >= 44 ? 92 : 48;
   const endY = input.finishY + ROAD_TAIL;
   const waypoints = buildWaypoints(input, roadW, gridLen, endY);

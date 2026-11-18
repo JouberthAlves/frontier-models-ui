@@ -31,6 +31,8 @@ const GRID_TOP = NAV_H + 34;
 /** Length of the last stretch (before the finish) that breaks up. */
 const BREAK_BEFORE_FINISH = 640;
 const BAND = 220;
+/** px each stretch of road is drawn past its end, under the next one. */
+const SEAM_OVERLAP = 8;
 const TINT_GOLD = [255, 196, 120] as const;
 const TINT_DUSK = [60, 70, 120] as const;
 const TINT_NIGHT = [16, 30, 53] as const;
@@ -56,6 +58,12 @@ interface Layout {
   cover: Float32Array | null;
   /** Document y the leading car is at when its flight ends. */
   floatEndY: number;
+  /**
+   * The Orbitarium heading and lede, which the flying cars must not cross: they go down the
+   * free margin at `x` while between `top` and `bottom`. `x` is null when there is no margin
+   * to use (phones, tablets): there the cars dim while they are behind the text.
+   */
+  avoid: { x: number | null; top: number; bottom: number } | null;
   signature: number[];
 }
 
@@ -126,9 +134,15 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
   const orbitTop = orbitLayout ? orbitLayout.getBoundingClientRect().top - origin.top : finishY + 900;
   const orbitHalf = orbitSvg ? Math.min(220, orbitSvg.getBoundingClientRect().height / 2) : 160;
   const floatEndY = orbitTop + orbitHalf;
+  const orbitHead = document.querySelector<HTMLElement>('#orbitarium .section__head');
+  const headRect = orbitHead ? rectOf(orbitHead) : null;
+  const avoid =
+    headRect && headRect.bottom > headRect.top
+      ? { x: headRect.left >= 46 ? Math.max(22, headRect.left / 2) : null, top: headRect.top, bottom: headRect.bottom }
+      : null;
 
   // Nothing moved by 2 px or more: keep the current map.
-  const signature = [W, finishY, floatEndY, ...blocks.flatMap(block => [block.left, block.right, block.top, block.bottom])];
+  const signature = [W, finishY, floatEndY, avoid?.top ?? 0, avoid?.bottom ?? 0, ...blocks.flatMap(block => [block.left, block.right, block.top, block.bottom])];
   if (
     previous &&
     previous.signature.length === signature.length &&
@@ -175,18 +189,43 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
     }
   }
 
-  return { W, H, breakY, breakLen, track, scenery, slices, chunks, cover, floatEndY, signature };
+  return { W, H, breakY, breakLen, track, scenery, slices, chunks, cover, floatEndY, avoid, signature };
 }
 
-/** Kerbs, asphalt and centre line of one stretch of road (the soft shadow is drawn apart). */
-function Road({ id, offset, roadW }: { id: string; offset: number; roadW: number }) {
+interface RoadProps {
+  id: string;
+  offset: number;
+  roadW: number;
+}
+
+/** Kerbs of one stretch of road (red base + white dashes). */
+function RoadKerbs({ id, offset, roadW }: RoadProps) {
   const href = `#${id}`;
   return (
     <>
       <use href={href} className="rm-kerb-red" strokeWidth={roadW + 10} />
       <use href={href} className="rm-kerb-white" strokeWidth={roadW + 10} strokeDasharray="14 14" strokeDashoffset={offset % 28} />
+    </>
+  );
+}
+
+/** Asphalt and centre line of one stretch of road. */
+function RoadTop({ id, offset, roadW }: RoadProps) {
+  const href = `#${id}`;
+  return (
+    <>
       <use href={href} className="rm-asphalt" strokeWidth={roadW} />
       <use href={href} className="rm-centre" strokeWidth={2} strokeDasharray="18 22" strokeDashoffset={offset % 40} />
+    </>
+  );
+}
+
+/** Kerbs, asphalt and centre line of one stretch of road (the soft shadow is drawn apart). */
+function Road(props: RoadProps) {
+  return (
+    <>
+      <RoadKerbs {...props} />
+      <RoadTop {...props} />
     </>
   );
 }
@@ -269,7 +308,7 @@ export default function RaceMap() {
     const carsRoot = carsRef.current;
     const root = rootRef.current;
     if (!layout || !carsRoot || !root) return undefined;
-    const { track, W, chunks, slices, cover, breakLen, floatEndY } = layout;
+    const { track, W, chunks, slices, cover, breakLen, floatEndY, avoid } = layout;
     const cars = Array.from(carsRoot.querySelectorAll<HTMLElement>('.race-car')).map(el => ({
       el,
       tint: el.querySelector<SVGElement>('.race-car__tint')
@@ -389,8 +428,8 @@ export default function RaceMap() {
           node.style.opacity = ground;
         });
         if (tailShadow) tailShadow.style.opacity = (1 - clamp(progress * 3)).toFixed(3);
-        sliceNodes.forEach((node, index) => {
-          const slice = slices[index];
+        sliceNodes.forEach(node => {
+          const slice = slices[Number(node.dataset.slice)];
           if (slice) node.style.opacity = (1 - clamp((front - slice.from) / (slice.to - slice.from + 40))).toFixed(3);
         });
         if (fx) {
@@ -448,12 +487,30 @@ export default function RaceMap() {
         const tx = rect ? rect.left + rect.width / 2 + window.scrollX - originX : W / 2;
         const ty = rect ? rect.top + rect.height / 2 + sy - originY : floatEndY;
         const side = i % 2 ? 1 : -1;
-        const c2 = clamp(tx - side * 160, 24, W - 24);
-        const x = bez(end.x, end.x, c2, tx, t);
         const y = bez(end.y, end.y + floatSpan / 3, ty - 260, ty, t);
+        let x: number;
+        let dim = 1;
+        if (avoid && avoid.x !== null && avoid.bottom < ty) {
+          // Around the Orbitarium heading and lede: out to the free margin above the text,
+          // straight down beside it, then across to the planet.
+          const above = avoid.top - 50;
+          const below = avoid.bottom + 24;
+          // Each car keeps its own lane in the margin so two cars never sit on the same pixel.
+          const lane = clamp(avoid.x + ((i % 3) - 1) * 26, 18, Math.max(18, avoid.x * 2 - 18));
+          if (y <= above) x = mix(end.x, lane, smooth((y - end.y - 40) / Math.max(1, above - end.y - 40)));
+          else if (y <= below) x = lane;
+          else x = mix(lane, tx, smooth((y - below) / Math.max(80, ty - below)));
+          // A planet level with the text: the car finishes the move across while it fades.
+          x = mix(x, tx, smooth((t - 0.72) / 0.23));
+        } else {
+          const c2 = clamp(tx - side * 160, 24, W - 24);
+          x = bez(end.x, end.x, c2, tx, t);
+          // No free margin (phones, tablets): the car dims while it is behind the text.
+          if (avoid) dim = 1 - 0.75 * smooth((y - avoid.top + 70) / 60) * (1 - smooth((y - avoid.bottom) / 60));
+        }
         const turn = t * t * (220 + (i % 4) * 60) * side;
         car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${turn.toFixed(1)}deg) scale(${(scale * mix(1, 0.55, t)).toFixed(3)})`;
-        car.el.style.opacity = (1 - clamp((t - 0.75) / 0.2)).toFixed(3);
+        car.el.style.opacity = (dim * (1 - clamp((t - 0.75) / 0.2))).toFixed(3);
         if (car.tint) car.tint.style.opacity = clamp(t * 1.4).toFixed(3);
       }
     };
@@ -533,7 +590,22 @@ export default function RaceMap() {
     0,
     slices.findIndex(slice => track.finishLen < slice.to)
   );
-  const { village, bridge, cliff } = scenery;
+  const { village, bridge, cliff, river, moon } = scenery;
+  const finishMark = (
+    <>
+      <rect x={finish.x - (roadW + 10) / 2} y={finish.y - 7} width={roadW + 10} height="14" fill="url(#rm-check)" />
+      <g ref={flagsRef} className="rm-flags">
+        {[-1, 1].map(side => (
+          <g key={side} transform={`translate(${(finish.x + side * (roadW / 2 + 12)).toFixed(1)} ${(finish.y + 4).toFixed(1)})`}>
+            <g className="rm-flag" style={{ ['--dir' as string]: side }}>
+              <path d="M0 0V-28" className="rm-flag__pole" />
+              <path d="M0 -28h15v10h-15z" fill="url(#rm-check)" />
+            </g>
+          </g>
+        ))}
+      </g>
+    </>
+  );
 
   return (
     <>
@@ -575,23 +647,26 @@ export default function RaceMap() {
               <stop offset={Math.max(0.5, breakY / H).toFixed(4)} stopColor={rgba(atBreak.rgb, atBreak.alpha)} />
               <stop offset={Math.max(0.5, bandEnd / H).toFixed(4)} stopColor={rgba(atBreak.rgb, 0)} />
             </linearGradient>
-            <path id="rm-road-body" d={track.slice(0, breakLen)} />
+            {/* Each stretch runs a few px into the next one, so no seam shows where they meet. */}
+            <path id="rm-road-body" d={track.slice(0, breakLen + SEAM_OVERLAP)} />
             <path id="rm-road-tail" d={track.slice(breakLen, track.length)} />
-            {slices.map((slice, index) => (
-              <path key={index} id={`rm-slice-${index}`} d={track.slice(slice.from, slice.to)} />
-            ))}
+            {!reduced &&
+              slices.map((slice, index) => (
+                <path key={index} id={`rm-slice-${index}`} d={track.slice(slice.from, slice.to + SEAM_OVERLAP)} />
+              ))}
           </defs>
 
           {/* Ground of the last stretch: fades after the finish line. Drawn under everything. */}
           <g data-tail="ground">
             <rect x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-ground-tail)" />
-            {scenery.patches.map((patch, index) => (patch.tail ? <path key={index} d={patch.d} className="mf-grass-2" /> : null))}
             <rect x={scenery.stand.x} y={scenery.stand.y} width={scenery.stand.w} height={scenery.stand.h} rx="4" fill="url(#rm-stand)" />
           </g>
 
           {/* Ground of the rest of the map. Its lower band fades into the last stretch. */}
           <rect x="0" y="0" width={W} height={bandEnd} fill="url(#rm-ground-body)" />
-          {scenery.patches.map((patch, index) => (patch.tail ? null : <path key={index} d={patch.d} className="mf-grass-2" />))}
+          {scenery.patches.map((d, index) => (
+            <path key={index} d={d} className="mf-grass-2" />
+          ))}
           <path d={scenery.sand} className="mf-sand" />
           <path d={scenery.wetSand} className="rm-wet-sand" />
           <path d={scenery.shallow} className="mf-shallow" />
@@ -601,26 +676,31 @@ export default function RaceMap() {
           {scenery.foamInner && <path d={scenery.foamInner} className="rm-foam rm-foam--inner" />}
           {scenery.cove && <path d={scenery.cove} className="mf-sea" />}
           {scenery.coveFoam && <path d={scenery.coveFoam} className="rm-foam" />}
-          {cliff && <path d={cliff.face} className="mf-shadow" transform="translate(3 9)" />}
-          {cliff && <path d={cliff.face} className="mf-sand-2" />}
-          {cliff && <path d={cliff.lip} className="rm-cliff-lip" />}
-          {village && (
+          {cliff && (
+            // A step in the ground: the shadow it throws on the lower grass, the face, the shaded
+            // band along its foot, a seam in the rock and the lit top edge.
             <>
-              <path d={village.streets} className="rm-street" strokeWidth={village.streetWidth} />
-              <rect
-                x={village.plaza.left}
-                y={village.plaza.top}
-                width={village.plaza.right - village.plaza.left}
-                height={village.plaza.bottom - village.plaza.top}
-                rx={village.radius}
-                className="mf-sand"
-              />
-              {village.fence && <path d={village.fence} className="mf-fence-shadow" transform="translate(2 3)" />}
-              {village.fence && <path d={village.fence} className="mf-fence" />}
+              <path d={cliff.face} className="rm-cliff-shadow" transform="translate(4 13)" />
+              <path d={cliff.face} className="mf-sand-2" />
+              <path d={cliff.foot} className="rm-cliff-foot" />
+              <path d={cliff.lip} className="rm-cliff-lip" />
             </>
           )}
-          {scenery.river && <path d={scenery.river.d} className="rm-river-bank" strokeWidth={scenery.river.width + 10} />}
-          {scenery.river && <path d={scenery.river.d} className="rm-river" strokeWidth={scenery.river.width} />}
+          {village && (
+            <>
+              <path d={village.plaza} className="mf-sand" />
+              {/* The ring fence read as a diagram (a dashed ellipse): the village is open now. */}
+              <path d={village.streets} className="rm-street" strokeWidth={village.streetWidth} />
+            </>
+          )}
+          {river && (
+            <>
+              <path d={river.water} className="rm-river-bank" />
+              <path d={river.water} className="rm-river" />
+              <path d={river.deep} className="rm-river-deep" strokeWidth={river.deepWidth} />
+              {river.stones && <path d={river.stones} className="rm-river-stones" />}
+            </>
+          )}
 
           {/* Road. The last stretch is cut in slices that fade one after the other. */}
           <g fill="none" strokeLinejoin="round">
@@ -628,34 +708,34 @@ export default function RaceMap() {
               <RoadShadow id="rm-road-tail" roadW={roadW} />
             </g>
             <RoadShadow id="rm-road-body" roadW={roadW} />
-            {slices.map((slice, index) => (
-              <g key={index} data-slice>
-                <Road id={`rm-slice-${index}`} offset={sliceStart(slice)} roadW={roadW} />
-                {index === finishSlice && (
-                  <>
-                    <rect x={finish.x - (roadW + 10) / 2} y={finish.y - 7} width={roadW + 10} height="14" fill="url(#rm-check)" />
-                    <g ref={flagsRef} className="rm-flags">
-                      {[-1, 1].map(side => (
-                        <g key={side} transform={`translate(${(finish.x + side * (roadW / 2 + 12)).toFixed(1)} ${(finish.y + 4).toFixed(1)})`}>
-                          <g className="rm-flag" style={{ ['--dir' as string]: side }}>
-                            <path d="M0 0V-28" className="rm-flag__pole" />
-                            <path d="M0 -28h15v10h-15z" fill="url(#rm-check)" />
-                          </g>
-                        </g>
-                      ))}
-                    </g>
-                  </>
-                )}
-              </g>
-            ))}
+            {reduced ? (
+              // Reduced motion: nothing fades, so the last stretch is one path.
+              <>
+                <Road id="rm-road-tail" offset={Math.floor(breakLen / TRACK_STEP) * TRACK_STEP} roadW={roadW} />
+                {finishMark}
+              </>
+            ) : (
+              // Two passes (all kerbs, then all asphalt), so a slice's kerb edge never shows as a
+              // hairline across the asphalt of the slice before it.
+              <>
+                {slices.map((slice, index) => (
+                  <g key={`k${index}`} data-slice={index}>
+                    <RoadKerbs id={`rm-slice-${index}`} offset={sliceStart(slice)} roadW={roadW} />
+                  </g>
+                ))}
+                {slices.map((slice, index) => (
+                  <g key={`t${index}`} data-slice={index}>
+                    <RoadTop id={`rm-slice-${index}`} offset={sliceStart(slice)} roadW={roadW} />
+                    {index === finishSlice && finishMark}
+                  </g>
+                ))}
+              </>
+            )}
           </g>
 
-          {/* Scenery of the last stretch and the first stars: fade with its ground. */}
+          {/* Scenery of the last stretch: fades with its ground. */}
           <g data-tail="scenery">
             <Pieces scenery={scenery} tail />
-            {scenery.stars.map((star, index) => (
-              <path key={index} d={star.d} fill="#fff" opacity={star.o} />
-            ))}
           </g>
 
           <g fill="none" strokeLinejoin="round">
@@ -676,11 +756,30 @@ export default function RaceMap() {
             <rect key={slot.key} x={slot.x - roadW * 0.21} y={slot.y} width={roadW * 0.42} height="3" rx="1" className="rm-slot" />
           ))}
           <rect x={startLine.x - roadW / 2} y={startLine.y} width={roadW} height="8" fill="url(#rm-check)" />
+          {scenery.hedges && (
+            <>
+              <path d={scenery.hedges} className="mf-shadow" transform="translate(2.5 3.5)" />
+              <path d={scenery.hedges} className="rm-hedge" />
+            </>
+          )}
           <Pieces scenery={scenery} tail={false} />
 
           {/* Hour of the day: gold at the top, dusk towards the finish. */}
           <rect x="0" y="0" width={W} height={bandEnd} fill="url(#rm-tint-body)" />
           <rect data-tail="tint" x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-tint-tail)" />
+
+          {/* Night at the finish, over the tint so it stays bright: the first stars and a crescent moon. */}
+          <g data-tail="sky">
+            {scenery.stars.map((star, index) => (
+              <path key={index} d={star.d} className="rm-star" opacity={star.o} />
+            ))}
+            <circle cx={moon.x} cy={moon.y} r={moon.r * 1.9} className="rm-moon-glow" />
+            <path
+              d="M.586 -.81A1 1 0 1 0 .586 .81A.82 .82 0 1 1 .586 -.81Z"
+              className="rm-moon"
+              transform={`translate(${moon.x.toFixed(1)} ${moon.y.toFixed(1)}) rotate(210) scale(${moon.r.toFixed(1)})`}
+            />
+          </g>
         </svg>
       </div>
 
