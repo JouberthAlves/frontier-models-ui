@@ -22,6 +22,24 @@ const PAIRS: [number, number][] = [
 
 const clampPct = (value: number) => Math.min(100, Math.max(0, value));
 
+/* Icons drawn as SVG, not text: the ←/‹ glyphs come from a fallback font and rendered smaller and
+   off-centre next to →/›. Left is the right one mirrored, so both sides are always identical. */
+function ArrowIcon({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg className={`viewer__icon viewer__icon--${dir}`} viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+      <path d="M3.5 10h12.5M11 5l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function KnobIcon() {
+  return (
+    <svg className="viewer__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M9.5 7 4.5 12l5 5M14.5 7l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function SceneViewer({ open, opener, scene, onScene, onClose }: SceneViewerProps) {
   const { t, lang } = useI18n();
   const { selected } = useCompare();
@@ -195,7 +213,7 @@ export default function SceneViewer({ open, opener, scene, onScene, onClose }: S
                     onKeyDown={onSliderKey}
                   >
                     <span className="viewer__knob" aria-hidden="true">
-                      ‹›
+                      <KnobIcon />
                     </span>
                   </div>
                 </div>
@@ -239,10 +257,10 @@ export default function SceneViewer({ open, opener, scene, onScene, onClose }: S
 
             <div className="viewer__actions">
               <button type="button" className="btn btn--ghost viewer__nav" aria-label={t.viewer.prev} onClick={() => step(-1)}>
-                <span aria-hidden="true">←</span>
+                <ArrowIcon dir="left" />
               </button>
               <button type="button" className="btn btn--ghost viewer__nav" aria-label={t.viewer.next} onClick={() => step(1)}>
-                <span aria-hidden="true">→</span>
+                <ArrowIcon dir="right" />
               </button>
               <button type="button" className="btn btn--ink" onClick={() => dialogRef.current?.close()}>
                 {t.viewer.close}

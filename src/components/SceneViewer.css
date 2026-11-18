@@ -139,9 +139,16 @@
   border-radius: 50%;
   background: var(--ink);
   color: var(--bg-0);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.1em;
+}
+
+.viewer__icon {
+  display: block;
+  flex: none;
+}
+
+/* The back arrow is the forward one mirrored: same size, same centre. */
+.viewer__icon--left {
+  transform: scaleX(-1);
 }
 
 .viewer__handle:focus-visible .viewer__knob {
@@ -211,9 +218,10 @@
 }
 
 .viewer__nav {
+  display: inline-grid;
+  place-items: center;
   width: 48px;
   padding: 0;
-  font-size: 20px;
 }
 
 @media (max-width: 599px) {
