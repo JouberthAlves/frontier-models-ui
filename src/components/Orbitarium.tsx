@@ -2,12 +2,13 @@ import { useState } from 'react';
 import SectionTitle from './SectionTitle';
 import OrbitMap from './OrbitMap';
 import StarBorder from './bits/StarBorder';
+import DecryptedText from './bits/DecryptedText';
 import ExternalLink from './ExternalLink';
 import { useI18n } from '../i18n/i18n';
 import { orbitArena } from '../data/archive';
 import { colorOf } from '../data/models';
 import { hasGpu } from '../lib/gpu';
-import { useReducedMotion } from '../lib/motion';
+import { isKeyboardFocus, useReducedMotion } from '../lib/motion';
 import { useReveal } from '../lib/reveal';
 import './Orbitarium.css';
 
@@ -15,6 +16,7 @@ export default function Orbitarium() {
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const [selectedKey, setSelectedKey] = useState(orbitArena[0]?.key ?? '');
+  const [nameKeys, setNameKeys] = useState<Record<string, number>>({});
   const listReveal = useReveal<HTMLUListElement>();
   const mapReveal = useReveal<HTMLDivElement>();
   const animatedBorder = !reduced && hasGpu();
@@ -48,9 +50,16 @@ export default function Orbitarium() {
                           className="orbit-card__select"
                           aria-pressed={selected}
                           onClick={() => setSelectedKey(run.key)}
+                          onFocus={event => {
+                            if (isKeyboardFocus(event.currentTarget)) {
+                              setNameKeys(keys => ({ ...keys, [run.key]: (keys[run.key] ?? 0) + 1 }));
+                            }
+                          }}
                         >
                           <span className="dot" aria-hidden="true" />
-                          <span className="wrap-any">{run.model}</span>
+                          <span className="wrap-any">
+                            <DecryptedText text={run.model} animateOn="hover" playKey={nameKeys[run.key] ?? 0} tone={color} />
+                          </span>
                         </button>
                       </h3>
                       <p className="orbit-card__prompt">

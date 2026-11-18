@@ -1,56 +1,66 @@
 import { useEffect, useRef, useState } from 'react';
 import Galaxy from './bits/Galaxy';
+import { markStep } from '../lib/boot';
 import { hasGpu, reportGalaxyOff } from '../lib/gpu';
-import { isSmallScreen, isTouchDevice, useReducedMotion, whenIdle } from '../lib/motion';
+import { isSmallScreen, isTouchDevice, useReducedMotion } from '../lib/motion';
 import './Background.css';
 
 // Cool tints with a few warm ones (one slot in eight).
 const STAR_COLORS = ['#83caff', '#85e4eb', '#f1f6fd', '#83caff', '#85e4eb', '#f1f6fd', '#f1f6fd', '#ffc99d'];
 
-type Tone = 'none' | 'warm' | 'cool';
-
 /**
- * Global background, fixed behind the page: diagonal base gradient, the Galaxy shader (real GPU
- * only) or a static CSS star field, and the two tone veils driven by the active section.
+ * Global background, fixed behind the page: navy base gradient, the sky (Galaxy shader with a
+ * real GPU, otherwise a static CSS star field) and the cool veil of the Orbitarium.
+ *
+ * v2: the sky is hidden behind the map of the racing zone. RaceMap fades the `[data-race-sky]`
+ * wrapper in from the finish line on; the Galaxy is compiled while the page loads (loading
+ * step 5) and only renders once the finish line is within one screen.
  */
 export default function Background() {
   const reduced = useReducedMotion();
-  const [galaxyReady, setGalaxyReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const veilsRef = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  const veilRef = useRef<HTMLDivElement>(null);
 
   const gpu = !reduced && hasGpu();
-  const showGalaxy = gpu && galaxyReady && !failed;
+  const showGalaxy = gpu && !failed;
 
   useEffect(() => {
-    if (!gpu) {
-      reportGalaxyOff();
-      return undefined;
-    }
-    return whenIdle(() => setGalaxyReady(true), 300);
+    if (gpu) return;
+    reportGalaxyOff();
+    markStep('sky');
   }, [gpu]);
 
-  // Tone veils: the section crossing the middle line of the viewport.
+  // The finish line is within one screen below the viewport, or already above it.
   useEffect(() => {
-    const veils = veilsRef.current;
-    if (!veils || typeof IntersectionObserver !== 'function') return undefined;
-    const ids = ['top', 'racing', 'orbitarium', 'prompts', 'archive'];
-    const active = new Map<string, boolean>();
-    const apply = () => {
-      const tone: Tone = active.get('racing') ? 'warm' : active.get('orbitarium') ? 'cool' : 'none';
-      veils.dataset.tone = tone;
-    };
+    const finish = document.querySelector('[data-track-finish]');
+    if (!finish || typeof IntersectionObserver !== 'function') {
+      const id = setTimeout(() => setNear(true), 0);
+      return () => clearTimeout(id);
+    }
     const observer = new IntersectionObserver(
       entries => {
-        entries.forEach(entry => active.set(entry.target.id, entry.isIntersecting));
-        apply();
+        const entry = entries[entries.length - 1];
+        setNear(entry.isIntersecting || entry.boundingClientRect.top < 0);
+      },
+      { rootMargin: '0px 0px 100% 0px', threshold: 0 }
+    );
+    observer.observe(finish);
+    return () => observer.disconnect();
+  }, []);
+
+  // Cool veil: on while the Orbitarium crosses the middle line of the viewport.
+  useEffect(() => {
+    const veil = veilRef.current;
+    const section = document.getElementById('orbitarium');
+    if (!veil || !section || typeof IntersectionObserver !== 'function') return undefined;
+    const observer = new IntersectionObserver(
+      entries => {
+        veil.dataset.on = String(entries.some(entry => entry.isIntersecting));
       },
       { rootMargin: '-45% 0px -45% 0px', threshold: 0 }
     );
-    ids.forEach(id => {
-      const section = document.getElementById(id);
-      if (section) observer.observe(section);
-    });
+    observer.observe(section);
     return () => observer.disconnect();
   }, []);
 
@@ -60,27 +70,29 @@ export default function Background() {
   return (
     <div className="bg" aria-hidden="true">
       <div className="bg__base" />
-      <div className={`bg__stars${showGalaxy ? ' is-hidden' : ''}`} />
-      {showGalaxy && (
-        <div className="bg__galaxy">
-          <Galaxy
-            starColors={STAR_COLORS}
-            density={small ? 0.6 : 1}
-            layers={small ? 2 : 4}
-            dpr={touch ? 1 : Math.min(window.devicePixelRatio || 1, 1.25)}
-            frameRateCap={touch ? 30 : 0}
-            onFail={reason => {
-              // Frozen: keep the last complete frame on screen. Lost / unavailable: static stars.
-              if (reason !== 'frozen') setFailed(true);
-              reportGalaxyOff();
-            }}
-          />
-        </div>
-      )}
-      <div ref={veilsRef} className="bg__veils" data-tone="none">
-        <div className="bg__veil bg__veil--warm" />
-        <div className="bg__veil bg__veil--cool" />
+      <div className="bg__sky" data-race-sky>
+        <div className={`bg__stars${showGalaxy ? ' is-hidden' : ''}`} />
+        {showGalaxy && (
+          <div className="bg__galaxy">
+            <Galaxy
+              starColors={STAR_COLORS}
+              density={small ? 0.6 : 1}
+              layers={small ? 2 : 4}
+              dpr={touch ? 1 : Math.min(window.devicePixelRatio || 1, 1.25)}
+              frameRateCap={touch ? 30 : 0}
+              paused={!near}
+              onReady={() => markStep('sky')}
+              onFail={reason => {
+                // Frozen: keep the last complete frame on screen. Lost / unavailable: static stars.
+                if (reason !== 'frozen') setFailed(true);
+                reportGalaxyOff();
+                markStep('sky');
+              }}
+            />
+          </div>
+        )}
       </div>
+      <div ref={veilRef} className="bg__veil bg__veil--cool" data-on="false" />
     </div>
   );
 }

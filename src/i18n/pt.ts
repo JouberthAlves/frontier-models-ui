@@ -42,7 +42,7 @@ export const pt = {
     code: 'Código',
     deleted: 'Excluído',
     enlarge: (alt: string) => `Ampliar: ${alt}`,
-    games: 'Os 6 jogos',
+    games: (count: number) => `Os ${count} jogos`,
     prompt: 'Prompt V3.4',
     compareAdd: 'Comparar',
     compareIn: 'Na comparação',
@@ -135,8 +135,12 @@ export const pt = {
     credit: 'Fundo e efeitos de texto adaptados do React Bits, de David Haz (MIT + Commons Clause).',
     links: 'Links do arquivo'
   },
+  loader: {
+    text: 'Carregando o grid',
+    progress: (done: number, total: number) => `Carregando ${done} de ${total}`
+  },
   notice: {
-    text: 'Animações simplificadas neste aparelho: o fundo fica parado.',
+    text: 'Animações simplificadas neste aparelho: os carros ficam no grid e o fundo fica parado.',
     close: 'Fechar aviso'
   },
   newTab: '(abre em nova aba)'

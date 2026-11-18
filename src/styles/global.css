@@ -184,6 +184,60 @@ a {
   max-width: 70ch;
 }
 
+/* ---------- racing zone (hero + Racing): everything sits on the pastel map ---------- */
+.race-scope {
+  --race-gap: clamp(180px, 17vw, 240px);
+  --finish-gap: 200px;
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  /* Wider side margins: the road runs down them. */
+  .race-scope {
+    --gutter: 64px;
+    --race-gap: 200px;
+  }
+}
+
+@media (max-width: 767px) {
+  .race-scope {
+    --race-gap: 120px;
+    --finish-gap: 150px;
+  }
+}
+
+/* Cream card: the dark-theme tokens are re-pointed, so everything inside reads navy on cream. */
+.race-card {
+  --ink: var(--ink-navy);
+  --ink-2: var(--ink-navy-2);
+  --ink-3: var(--ink-navy-2);
+  --line: var(--card-line);
+  --card: #fffdf9;
+  --bg-1: #efe3d0;
+  --warm: var(--link-warm);
+  --warm-soft: var(--link-warm);
+  padding: 28px;
+  border: 1px solid var(--card-line);
+  border-radius: var(--r-race-card);
+  background: var(--card-cream);
+  box-shadow: 0 14px 36px rgba(60, 40, 20, 0.14);
+  color: var(--ink-navy);
+  color-scheme: light;
+}
+
+.race-card :focus-visible {
+  outline-color: var(--ink-navy);
+}
+
+.race-card .btn--ghost::before {
+  background: var(--ink-navy);
+}
+
+@media (max-width: 599px) {
+  .race-card {
+    padding: 18px;
+  }
+}
+
 /* ---------- links: underline that draws ---------- */
 .link {
   position: relative;

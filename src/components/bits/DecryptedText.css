@@ -54,6 +54,6 @@
 }
 
 .decrypted-text__glyph.is-scrambled {
-  color: var(--warm-soft);
-  opacity: 0.7;
+  color: var(--decrypt-color, var(--warm-soft));
+  opacity: var(--decrypt-opacity, 0.7);
 }

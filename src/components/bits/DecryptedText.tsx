@@ -1,6 +1,6 @@
 /*
  * Adapted from React Bits: https://github.com/DavidHDev/react-bits/blob/main/src/ts-default/TextAnimations/DecryptedText/DecryptedText.tsx
- * Changes for Frontier Models UI: no motion dependency; plays only when the text changes after mount (language switch); sequential reveal; layout-stable cells; timer fallback.
+ * Changes for Frontier Models UI: no motion dependency; plays only when the text changes after mount (language switch); sequential reveal; layout-stable cells; timer fallback; animateOn="hover" mode for model names (scramble and resolve left to right in the model color).
  *
  * MIT + Commons Clause License Condition v1.0
  *
@@ -27,8 +27,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useReducedMotion } from '../../lib/motion';
+import { useScramble } from '../../lib/scramble';
 import './DecryptedText.css';
 
 export interface DecryptedTextProps {
@@ -41,6 +42,14 @@ export interface DecryptedTextProps {
   revealDirection?: 'start' | 'end';
   characters?: string;
   className?: string;
+  /** "change" (default): plays when the text changes. "hover": plays on mouse enter / playKey. */
+  animateOn?: 'change' | 'hover';
+  /** Hover mode: bump it to play from outside (card hover, keyboard focus). */
+  playKey?: number;
+  /** Hover mode: color of the scrambled glyphs (model identity color). */
+  tone?: string;
+  /** Hover mode: the name sits on a cream card, so the tone is darkened to keep AA contrast. */
+  onCream?: boolean;
 }
 
 const isSpace = (char: string) => /\s/.test(char);
@@ -49,11 +58,88 @@ const isSpace = (char: string) => /\s/.test(char);
 const placeholder = (chars: string[], pool: string[]) =>
   chars.map((char, index) => (isSpace(char) ? char : pool[((char.codePointAt(0) ?? 0) + index * 7) % pool.length]));
 
+/** Cells grouped into words, so the line breaks never move while scrambling. */
+function renderCells(text: string, shown: string[]): ReactNode {
+  const chars = Array.from(text);
+  const words: { key: number; cells: number[] }[] = [];
+  let current: number[] = [];
+  chars.forEach((char, index) => {
+    if (isSpace(char)) {
+      if (current.length) words.push({ key: current[0], cells: current });
+      words.push({ key: index, cells: [index] });
+      current = [];
+    } else {
+      current.push(index);
+    }
+  });
+  if (current.length) words.push({ key: current[0], cells: current });
+
+  return (
+    <>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">
+        {words.map(word =>
+          word.cells.length === 1 && isSpace(chars[word.cells[0]]) ? (
+            <span key={word.key}> </span>
+          ) : (
+            <span className="decrypted-text__word" key={word.key}>
+              {word.cells.map(index => {
+                const scrambled = shown[index] !== chars[index];
+                return (
+                  <span className="decrypted-text__cell" key={index}>
+                    <span className="decrypted-text__ghost">{chars[index]}</span>
+                    <span className={`decrypted-text__glyph${scrambled ? ' is-scrambled' : ''}`}>{shown[index]}</span>
+                  </span>
+                );
+              })}
+            </span>
+          )
+        )}
+      </span>
+    </>
+  );
+}
+
+/**
+ * Hover mode (spec-v2 §7): scrambles and resolves from left to right when the mouse enters the
+ * name, or when `playKey` changes. Width is locked by the ghost cells; the real text stays
+ * available to assistive tech.
+ */
+function HoverDecrypt({ text, speed = 35, className = '', playKey, tone, onCream }: DecryptedTextProps) {
+  const { shown, play } = useScramble(text, speed);
+  const lastKey = useRef(playKey);
+
+  useEffect(() => {
+    if (playKey === lastKey.current) return;
+    lastKey.current = playKey;
+    play();
+  }, [playKey, play]);
+
+  const style = tone
+    ? ({
+        '--decrypt-color': onCream ? `color-mix(in oklab, ${tone} 55%, #0f1a2b)` : tone,
+        '--decrypt-opacity': 1
+      } as CSSProperties)
+    : undefined;
+
+  return (
+    <span
+      className={`decrypted-text ${className}`.trim()}
+      style={style}
+      onPointerEnter={event => {
+        if (event.pointerType === 'mouse') play();
+      }}
+    >
+      {shown ? renderCells(text, shown) : text}
+    </span>
+  );
+}
+
 /**
  * Plays only when `text` changes after mount (language switch). The final text is always
  * available to screen readers; the animated glyphs are aria-hidden.
  */
-const DecryptedText = ({
+const ChangeDecrypt = ({
   text,
   speed = 35,
   maxIterations = 8,
@@ -128,49 +214,15 @@ const DecryptedText = ({
   const shown =
     reduced || text === settled ? chars : frame && frame.text === text ? frame.shown : placeholder(chars, pool);
 
-  // Group cells into words so the line breaks never move while scrambling.
-  const words: { key: number; cells: number[] }[] = [];
-  let current: number[] = [];
-  chars.forEach((char, index) => {
-    if (isSpace(char)) {
-      if (current.length) words.push({ key: current[0], cells: current });
-      words.push({ key: index, cells: [index] });
-      current = [];
-    } else {
-      current.push(index);
-    }
-  });
-  if (current.length) words.push({ key: current[0], cells: current });
-
   // At rest, plain text: copy, find-in-page and screen readers see normal words.
   if (!frame && settled === text) {
     return <span className={`decrypted-text ${className}`.trim()}>{text}</span>;
   }
 
-  return (
-    <span className={`decrypted-text ${className}`.trim()}>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden="true">
-        {words.map(word =>
-          word.cells.length === 1 && isSpace(chars[word.cells[0]]) ? (
-            <span key={word.key}> </span>
-          ) : (
-            <span className="decrypted-text__word" key={word.key}>
-              {word.cells.map(index => {
-                const scrambled = shown[index] !== chars[index];
-                return (
-                  <span className="decrypted-text__cell" key={index}>
-                    <span className="decrypted-text__ghost">{chars[index]}</span>
-                    <span className={`decrypted-text__glyph${scrambled ? ' is-scrambled' : ''}`}>{shown[index]}</span>
-                  </span>
-                );
-              })}
-            </span>
-          )
-        )}
-      </span>
-    </span>
-  );
+  return <span className={`decrypted-text ${className}`.trim()}>{renderCells(text, shown)}</span>;
 };
+
+const DecryptedText = (props: DecryptedTextProps) =>
+  props.animateOn === 'hover' ? <HoverDecrypt {...props} /> : <ChangeDecrypt {...props} />;
 
 export default DecryptedText;

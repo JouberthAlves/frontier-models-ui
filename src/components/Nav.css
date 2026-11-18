@@ -16,12 +16,6 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(37, 65, 93, 0.6);
-  opacity: 0;
-  transition: opacity var(--t-short) ease;
-}
-
-.nav.is-solid::before {
-  opacity: 1;
 }
 
 .nav__inner {

@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import SectionTitle from './SectionTitle';
 import SplitFlapText from './bits/SplitFlapText';
-import EchoText from './bits/EchoText';
+import DecryptedText from './bits/DecryptedText';
 import SceneViewer from './SceneViewer';
 import ExternalLink from './ExternalLink';
 import { useI18n } from '../i18n/i18n';
@@ -9,16 +9,19 @@ import { useCompare } from '../context/CompareContext';
 import { racingArena, sceneSrc, type Run } from '../data/archive';
 import { colorOf } from '../data/models';
 import { SCENE_NUMBERS, sceneName } from '../data/scenes';
+import { isKeyboardFocus } from '../lib/motion';
 import { useReveal } from '../lib/reveal';
 import './Racing.css';
 
 const sceneSize = (run: Run, n: number) => run.scenes?.find(scene => scene.n === n) ?? { n, w: 1600, h: 900 };
+
 
 export default function Racing() {
   const { t, lang } = useI18n();
   const { selected } = useCompare();
   const [scene, setScene] = useState(1);
   const [viewer, setViewer] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
+  const [nameKeys, setNameKeys] = useState<Record<string, number>>({});
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabsReveal = useReveal<HTMLDivElement>();
   const stageReveal = useReveal<HTMLDivElement>();
@@ -28,10 +31,10 @@ export default function Racing() {
   const cols = selected.length;
   const sizes =
     cols === 1
-      ? '(max-width: 767px) calc(100vw - 32px), min(1240px, calc(100vw - 96px))'
+      ? '(max-width: 767px) calc(100vw - 72px), min(1184px, calc(100vw - 152px))'
       : cols === 2
-        ? '(max-width: 767px) calc(100vw - 32px), min(610px, calc(50vw - 56px))'
-        : '(max-width: 767px) calc(100vw - 32px), min(400px, calc(33vw - 40px))';
+        ? '(max-width: 767px) calc(100vw - 72px), min(580px, calc(50vw - 88px))'
+        : '(max-width: 767px) calc(100vw - 72px), min(380px, calc(33vw - 66px))';
 
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const last = SCENE_NUMBERS.length - 1;
@@ -49,14 +52,16 @@ export default function Racing() {
   const sceneLabel = (n: number) => `S${n} ${sceneName(lang, n)}`;
 
   return (
-    <section id="racing" className="section racing" aria-labelledby="racing-title">
-      <div className="shell">
-        <header className="section__head">
-          <SectionTitle id="racing-title" text={t.racing.title} strokeColor="var(--warm)" />
-          <p className="lede">{t.racing.intro}</p>
-        </header>
+    <section id="racing" className="section racing race-scope" aria-labelledby="racing-title">
+      <div className="shell racing__flow">
+        {/* Each block declares its side; the track is computed from these rectangles (RaceMap). */}
+        <div className="race-card racing__block racing__block--intro" data-track-side="right">
+          <header className="section__head">
+            <SectionTitle id="racing-title" text={t.racing.title} strokeColor="var(--ink-navy)" fill="var(--ink-navy)" />
+            <p className="lede">{t.racing.intro}</p>
+          </header>
 
-        <div ref={tabsReveal} className="scene-tabs" role="tablist" aria-label={t.racing.scenes}>
+          <div ref={tabsReveal} className="scene-tabs" role="tablist" aria-label={t.racing.scenes}>
           {SCENE_NUMBERS.map((n, index) => {
             const active = n === scene;
             return (
@@ -93,8 +98,10 @@ export default function Racing() {
               </button>
             );
           })}
+          </div>
         </div>
 
+        <div className="race-card racing__block racing__block--stage" data-track-side="full">
         <div
           ref={stageReveal}
           id="scene-stage"
@@ -112,10 +119,19 @@ export default function Racing() {
                 className="stage__col reveal-item"
                 style={{ ['--dot' as string]: colorOf(run), ['--i' as string]: index }}
                 aria-label={run.model}
+                onFocus={event => {
+                  if (isKeyboardFocus(event.target)) setNameKeys(keys => ({ ...keys, [run.id]: (keys[run.id] ?? 0) + 1 }));
+                }}
               >
                 <span className="stage__bar" aria-hidden="true" />
                 <h3 className="stage__name">
-                  <SplitFlapText text={run.model} color={colorOf(run)} />
+                  <SplitFlapText
+                    text={run.model}
+                    color="var(--ink-navy)"
+                    tileColor={colorOf(run)}
+                    decryptOnHover
+                    playKey={nameKeys[run.id] ?? 0}
+                  />
                 </h3>
                 <button
                   type="button"
@@ -160,15 +176,23 @@ export default function Racing() {
             );
           })}
         </div>
+        </div>
 
-        <h3 className="racing__games-title">{t.racing.games}</h3>
-        <ul ref={gamesReveal} className="games">
-          {racingArena.map((run, index) => (
-            <GameCard key={run.id} run={run} index={index} />
-          ))}
-        </ul>
+        <div className="race-card racing__block racing__block--games" data-track-side="left">
+          <h3 className="racing__games-title">{t.racing.games(racingArena.length)}</h3>
+          <ul ref={gamesReveal} className="games">
+            {racingArena.map((run, index) => (
+              <GameCard key={run.id} run={run} index={index} />
+            ))}
+          </ul>
 
-        <p className="caption racing__note">{t.racing.note}</p>
+          <p className="caption racing__note">{t.racing.note}</p>
+        </div>
+
+        {/* Finish line of the track, then room for the road to end and the cars to float away. */}
+        <div className="racing__finish" aria-hidden="true">
+          <span className="racing__finish-line" data-track-finish />
+        </div>
       </div>
 
       <SceneViewer
@@ -197,6 +221,9 @@ function GameCard({ run, index }: { run: Run; index: number }) {
         onPointerEnter={event => {
           if (event.pointerType === 'mouse') setEcho(value => value + 1);
         }}
+        onFocus={event => {
+          if (isKeyboardFocus(event.target)) setEcho(value => value + 1);
+        }}
       >
         <span className="game__stripe" aria-hidden="true" />
         <div className="frame game__thumb">
@@ -204,7 +231,7 @@ function GameCard({ run, index }: { run: Run; index: number }) {
         </div>
         <div className="game__body">
           <h3 className="game__name">
-            <EchoText text={run.model} playKey={echo} />
+            <DecryptedText text={run.model} animateOn="hover" playKey={echo} tone={colorOf(run)} onCream />
           </h3>
           <p className="game__prompt">{t.racing.prompt}</p>
           <div className="game__links">

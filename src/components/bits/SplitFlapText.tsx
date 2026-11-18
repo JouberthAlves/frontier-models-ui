@@ -1,6 +1,6 @@
 /*
  * Adapted from React Bits: https://github.com/DavidHDev/react-bits/blob/main/src/ts-default/TextAnimations/SplitFlapText/SplitFlapText.tsx
- * Changes for Frontier Models UI: single text (no loop), starts on reveal, wraps between words, transform-only flaps (no brightness filters), setTimeout fallback.
+ * Changes for Frontier Models UI: single text (no loop), starts on reveal, wraps between words, transform-only flaps (no brightness filters), setTimeout fallback, optional "decrypt" scramble on hover once the flaps have settled.
  *
  * MIT + Commons Clause License Condition v1.0
  *
@@ -30,6 +30,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useReducedMotion } from '../../lib/motion';
 import { observeReveal } from '../../lib/reveal';
+import { useScramble } from '../../lib/scramble';
 import './SplitFlapText.css';
 
 export interface SplitFlapTextProps {
@@ -42,6 +43,9 @@ export interface SplitFlapTextProps {
   /** Seconds between neighbouring tiles. */
   stagger?: number;
   flipsPerChar?: number;
+  /** Once settled, scramble and resolve the name on mouse enter (and when `playKey` changes). */
+  decryptOnHover?: boolean;
+  playKey?: number;
   className?: string;
 }
 
@@ -83,6 +87,8 @@ const SplitFlapText = ({
   flipDuration = 0.12,
   stagger = 0.06,
   flipsPerChar = 6,
+  decryptOnHover = false,
+  playKey,
   className = ''
 }: SplitFlapTextProps) => {
   const reduced = useReducedMotion();
@@ -90,6 +96,16 @@ const SplitFlapText = ({
   // Last fully shown text (the starting point of the next animation).
   const [shown, setShown] = useState('');
   const [frame, setFrame] = useState<{ target: string; tiles: Tile[] } | null>(null);
+  const scramble = useScramble(text);
+  const playScramble = scramble.play;
+  const lastKey = useRef(playKey);
+  const settled = shown === text && !frame;
+
+  useEffect(() => {
+    if (playKey === lastKey.current) return;
+    lastKey.current = playKey;
+    if (decryptOnHover && settled) playScramble();
+  }, [playKey, decryptOnHover, settled, playScramble]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -181,7 +197,13 @@ const SplitFlapText = ({
   }, [text, shown, reduced, flipDuration, stagger, flipsPerChar]);
 
   const animating = frame && frame.target === text;
-  const tiles = reduced ? staticTiles(text) : animating ? frame.tiles : staticTiles(shown || ' '.repeat(text.length));
+  const tiles = reduced
+    ? staticTiles(text)
+    : animating
+      ? frame.tiles
+      : settled && scramble.shown
+        ? staticTiles(scramble.shown.join(''))
+        : staticTiles(shown || ' '.repeat(text.length));
   const layout = (reduced || animating ? text : shown || text).padEnd(tiles.length, ' ');
   const groups = groupWords(tiles, layout);
 
@@ -192,7 +214,14 @@ const SplitFlapText = ({
   } as CSSProperties;
 
   return (
-    <span ref={rootRef} className={`split-flap-text ${className}`.trim()} style={style}>
+    <span
+      ref={rootRef}
+      className={`split-flap-text ${className}`.trim()}
+      style={style}
+      onPointerEnter={event => {
+        if (decryptOnHover && settled && event.pointerType === 'mouse') playScramble();
+      }}
+    >
       <span className="sr-only">{text}</span>
       {groups.map(group => (
         <span className="split-flap-text__word" aria-hidden="true" key={group[0]}>

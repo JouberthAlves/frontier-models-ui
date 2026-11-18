@@ -73,3 +73,12 @@ export function whenIdle(callback: () => void, fallbackMs = 300): () => void {
   const id = setTimeout(callback, fallbackMs);
   return () => clearTimeout(id);
 }
+
+/** True when the element is focused from the keyboard (`:focus-visible`). */
+export function isKeyboardFocus(element: Element): boolean {
+  try {
+    return element.matches(':focus-visible');
+  } catch {
+    return false;
+  }
+}

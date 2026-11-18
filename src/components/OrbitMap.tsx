@@ -12,17 +12,33 @@ interface OrbitMapProps {
 }
 
 const C = 300; // center of the 600×600 viewBox
-const RADII = [92, 132, 172, 208, 240];
 const SQUASH = 0.42;
 const TILT = -12;
-const PERIODS = [48, 64, 82, 104, 130];
-const PHASES = [0.08, 0.46, 0.73, 0.27, 0.6]; // fraction of a turn, as negative delays
+const R_MIN = 92;
+const R_MAX = 240;
+
+/** One orbit per run, from the data: radii spread between R_MIN and R_MAX, slower further out. */
+function orbits(count: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const t = count > 1 ? index / (count - 1) : 0.5;
+    return {
+      radius: Math.round(R_MIN + (R_MAX - R_MIN) * t),
+      period: Math.round(48 + 82 * Math.pow(t, 1.15)),
+      // Golden-ratio steps keep the starting positions apart (fraction of a turn).
+      phase: (0.08 + index * 0.381966) % 1
+    };
+  });
+}
 
 /**
  * Orbital map. Each planet orbits inside a group squashed by scale(1, 0.42) (the orbit is an
  * ellipse); the planet counter-rotates and counter-scales so it stays round and its label
  * upright. CSS animation on transform only; only with a real GPU and without reduced motion;
  * paused off screen and in hidden tabs.
+ *
+ * v2: RaceMap hides each planet (`data-orbit-planet`) until its car arrives from the track and
+ * reads the live position of `data-orbit-body` for the zero-g flight. Without that engine
+ * (reduced motion) the planets are simply visible.
  */
 export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps) {
   const { t } = useI18n();
@@ -73,6 +89,7 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
 
   const labelSize = 14 * scale;
   const hit = Math.max(22 * scale, 18);
+  const rings = orbits(runs.length);
 
   return (
     <svg
@@ -91,17 +108,18 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
       </defs>
       <circle cx={C} cy={C} r={26} fill="url(#orbit-star)" />
       <g transform={`rotate(${TILT} ${C} ${C})`}>
-        {RADII.map(rx => (
-          <ellipse key={rx} cx={C} cy={C} rx={rx} ry={rx * SQUASH} className="orbit-map__orbit" />
+        {rings.map((ring, index) => (
+          <ellipse key={index} cx={C} cy={C} rx={ring.radius} ry={ring.radius * SQUASH} className="orbit-map__orbit" />
         ))}
         <g transform={`translate(${C} ${C}) scale(1 ${SQUASH}) translate(${-C} ${-C})`}>
-          {runs.slice(0, RADII.length).map((run, index) => {
-            const px = C + RADII[index];
+          {runs.map((run, index) => {
+            const ring = rings[index];
+            const px = C + ring.radius;
             const selected = run.key === selectedKey;
-            const delay = `${-(PHASES[index] * PERIODS[index]).toFixed(2)}s`;
-            const timing = { animationDuration: `${PERIODS[index]}s`, animationDelay: delay };
+            const delay = `${-(ring.phase * ring.period).toFixed(2)}s`;
+            const timing = { animationDuration: `${ring.period}s`, animationDelay: delay };
             // Static phase (used when not spinning; the animation overrides it otherwise).
-            const angle = PHASES[index] * 360;
+            const angle = ring.phase * 360;
             return (
               <g key={run.key} className="orbit-map__spin" style={{ ...timing, transform: `rotate(${angle}deg)` }}>
                 <g
@@ -111,6 +129,7 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
                   <g transform={`translate(${px} ${C}) scale(1 ${1 / SQUASH}) rotate(${-TILT}) translate(${-px} ${-C})`}>
                     <g
                       className={`orbit-map__planet${selected ? ' is-selected' : ''}`}
+                      data-orbit-planet={index}
                       role="button"
                       tabIndex={0}
                       aria-label={t.orbitarium.select(run.model)}
@@ -121,7 +140,8 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
                       <circle cx={px} cy={C} r={hit} className="orbit-map__hit" />
                       <circle cx={px} cy={C} r={16 + 4 * Math.min(scale, 2)} className="orbit-map__focus" />
                       {selected && <circle cx={px} cy={C} r={17} className="orbit-map__ring" />}
-                      <circle cx={px} cy={C} r={11} fill={colorOf(run)} className="orbit-map__body" />
+                      <circle cx={px} cy={C} r={11} stroke={colorOf(run)} className="orbit-map__arrive" />
+                      <circle cx={px} cy={C} r={11} fill={colorOf(run)} className="orbit-map__body" data-orbit-body />
                       <text
                         x={px}
                         y={C + 22 + labelSize}

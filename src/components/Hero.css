@@ -2,80 +2,30 @@
   --hero-h: max(640px, min(100svh, 980px));
   position: relative;
   min-height: var(--hero-h);
-  overflow: clip;
-  display: flex;
-  flex-direction: column;
+  padding-top: calc(var(--hero-h) * 0.22);
+  color: var(--ink-navy);
 }
 
-/* ---------- track side ---------- */
-.hero__track {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  clip-path: polygon(0 0, 100% 0, 100% 20%, 0 36%);
-  background: linear-gradient(115deg, var(--track-0), var(--track-1) 70%, transparent);
-  opacity: 0.92;
-}
-
-.hero__trails {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-}
-
-/* ---------- seam ---------- */
-.hero__seam {
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  right: 0;
-  top: 20%;
-  height: 16%;
-  transform-origin: top center;
-  pointer-events: none;
-}
-
-.hero__seam svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  overflow: visible;
-}
-
-.hero__seam-halo {
-  filter: blur(12px);
-  opacity: 0.55;
-}
-
-@media (min-width: 900px) {
-  .hero__track {
-    clip-path: polygon(0 0, 58% 0, 42% 100%, 0 100%);
-  }
-
-  .hero__seam {
-    top: 0;
-    bottom: 0;
-    left: 42%;
-    right: auto;
-    width: 16%;
-    height: auto;
-  }
-}
-
-/* ---------- content ---------- */
+/* ---------- content: straight on the map, left side on wide screens ---------- */
 .hero__inner {
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 28px;
   width: 100%;
-  padding: calc(var(--hero-h) * 0.22) max(16px, 6vw) 72px;
+}
+
+@media (min-width: 1100px) {
+  .hero__inner {
+    width: 52%;
+  }
+}
+
+/* Phone: the road runs behind the right edge; keep the text clear of it. */
+@media (max-width: 767px) {
+  .hero__inner {
+    padding-right: 28px;
+  }
 }
 
 .hero__title {
@@ -85,38 +35,30 @@
 }
 
 .hero__title-art {
-  position: relative;
   display: block;
   font-size: min(clamp(56px, 12.5vw, 220px), calc(100cqi / var(--title-wem, 6.6)));
   line-height: 0.86;
   letter-spacing: -0.02em;
 }
 
-.hero__title-copy {
+/* The v1 seam, now a detail: 6 px orange→cyan underline that draws from the left. */
+.hero__underline {
   display: block;
-  clip-path: var(--clip-track);
-}
-
-.hero__title-copy--sky {
-  position: absolute;
-  inset: 0;
-  clip-path: var(--clip-sky);
-}
-
-.hero__title-motion {
-  display: block;
-  transform-origin: left center;
-}
-
-.hero__title-art .stroke-text__line {
+  width: min(100%, 560px);
+  height: 6px;
+  margin-top: 18px;
+  border-radius: 6px;
+  background: var(--seam-x);
   transform-origin: left center;
 }
 
 .hero__lede {
   max-width: 30ch;
-  color: var(--ink-2);
+  color: var(--ink-navy-2);
   font-size: 19px;
   line-height: 1.5;
+  --decrypt-color: var(--link-warm);
+  --decrypt-opacity: 1;
 }
 
 .hero__stats {
@@ -126,16 +68,17 @@
 }
 
 .hero__stat {
+  --rule: color-mix(in oklab, var(--ink-navy) 26%, transparent);
   display: flex;
   flex-direction: column-reverse;
   justify-content: flex-end;
   gap: 4px;
   padding: 4px 24px;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--rule);
 }
 
 .hero__stat:last-child {
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--rule);
 }
 
 .hero__stat-value {
@@ -146,11 +89,12 @@
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: var(--ink-navy);
 }
 
 .hero__stat-label {
   font-size: 14px;
-  color: var(--ink-2);
+  color: var(--ink-navy-2);
 }
 
 .hero__actions {
@@ -161,6 +105,19 @@
 
 .hero__action {
   display: inline-flex;
+}
+
+.hero .btn--secondary {
+  color: var(--ink-navy);
+  box-shadow: inset 0 0 0 1.5px var(--ink-navy);
+}
+
+.hero .btn--secondary::before {
+  background: var(--ink-navy);
+}
+
+.hero :focus-visible {
+  outline-color: var(--ink-navy);
 }
 
 @media (max-width: 599px) {
@@ -200,16 +157,11 @@
   }
 }
 
-/* ---------- ignition ---------- */
+/* ---------- ignition (starts when the loading lights go out) ---------- */
 @media (prefers-reduced-motion: no-preference) {
-  .hero__track {
-    opacity: 0;
-    transition: opacity 600ms linear;
-  }
-
-  .hero__seam {
-    transform: scaleY(0);
-    transition: transform 900ms var(--ease-rise) 150ms;
+  .hero__underline {
+    transform: scaleX(0);
+    transition: transform 700ms var(--ease-rise) 2700ms;
   }
 
   .hero__lede,
@@ -234,11 +186,7 @@
     transition-delay: calc(2200ms + var(--i, 0) * 80ms);
   }
 
-  [data-ignited] .hero__track {
-    opacity: 0.92;
-  }
-
-  [data-ignited] .hero__seam {
+  [data-ignited] .hero__underline {
     transform: none;
   }
 

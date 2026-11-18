@@ -48,6 +48,10 @@ export interface GalaxyProps {
   frameRateCap?: number;
   /** Called when the background stops for good (watchdog froze it or the context was lost). */
   onFail?: (reason: 'unavailable' | 'frozen' | 'lost') => void;
+  /** Called once the shader is compiled and the first frame is drawn. */
+  onReady?: () => void;
+  /** Stops the render loop (the sky is hidden behind the map). */
+  paused?: boolean;
   className?: string;
 }
 
@@ -204,14 +208,25 @@ const Galaxy = ({
   dpr = 1,
   frameRateCap = 0,
   onFail,
+  onReady,
+  paused = false,
   className = ''
 }: GalaxyProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onFailRef = useRef(onFail);
+  const onReadyRef = useRef(onReady);
+  const pausedRef = useRef(paused);
+  const wakeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     onFailRef.current = onFail;
-  }, [onFail]);
+    onReadyRef.current = onReady;
+  }, [onFail, onReady]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (!paused) wakeRef.current?.();
+  }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -287,7 +302,7 @@ const Galaxy = ({
 
     const frame = (now: number) => {
       raf = 0;
-      if (stopped || document.hidden) return;
+      if (stopped || document.hidden || pausedRef.current) return;
       if (lastTick) {
         const gap = now - lastTick;
         slowFrames = gap > SLOW_FRAME_MS ? slowFrames + 1 : 0;
@@ -310,8 +325,14 @@ const Galaxy = ({
     };
 
     const wake = () => {
-      if (!raf && !stopped && !document.hidden) raf = requestAnimationFrame(frame);
+      if (raf || stopped || document.hidden || pausedRef.current) return;
+      // Coming back from a pause: do not let the watchdog count the gap as slow frames.
+      lastTick = 0;
+      lastRender = 0;
+      slowFrames = 0;
+      raf = requestAnimationFrame(frame);
     };
+    wakeRef.current = wake;
 
     const resize = () => {
       const width = Math.max(1, window.innerWidth);
@@ -343,9 +364,11 @@ const Galaxy = ({
     canvas.addEventListener('webglcontextlost', onLost);
     resize();
     wake();
+    onReadyRef.current?.();
 
     return () => {
       stopped = true;
+      wakeRef.current = null;
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibility);

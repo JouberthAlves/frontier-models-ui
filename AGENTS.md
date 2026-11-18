@@ -4,7 +4,7 @@ Instruções para qualquer agente (Claude Code, Codex, Cursor…) que mexa neste
 
 ## O que é
 
-Interface para comparar as execuções do arquivo de benchmarks **Frontier Models** (fork `JouberthAlves/Frontiers-Models`, original `bielxdh3/Frontiers-Models`). Dois benchmarks: **Racing-bench** (jogo de corrida 3D, 12 prints de cena por execução) e **Orbitarium-bench** (Sistema Solar interativo). Direção visual: "Pista e Céu" (F1 noturna × planetário); spec completo em `_spec/spec.md`, protótipo da pista em `design/prototipo-pista.html`.
+Interface para comparar as execuções do arquivo de benchmarks **Frontier Models** (fork `JouberthAlves/Frontiers-Models`, original `bielxdh3/Frontiers-Models`). Dois benchmarks: **Racing-bench** (jogo de corrida 3D, 12 prints de cena por execução) e **Orbitarium-bench** (Sistema Solar interativo). Direção visual (v2): "Corrida até o céu": do hero ao fim do Racing a página é um mapa cartoon pastel visto de cima, com a pista em S contornando os blocos; depois da linha de chegada a pista se desfaz em estrelas e cada carro vira um planeta do Orbitarium. Spec: `_spec/spec-v2.md` (vale sobre `_spec/spec.md`, a v1, onde houver conflito). Visual alvo em `design/mockup-pista-cartoon.png`, mecânica em `design/prototipo-pista.html`.
 
 ## Regras que não se quebram
 
@@ -39,14 +39,25 @@ Quando o repo de benchmarks ganhar uma execução nova (ex.: um modelo novo no R
 5. **Copy:** se a execução usou outra versão de prompt, ajuste o texto de abertura do Racing/Orbitarium em `src/i18n/pt.ts` e `en.ts` (os dois idiomas).
 6. `npm run build`, `npm run lint`, prints em 375 e 1440 da seção mexida, commit em inglês com prefixo (`added:`, `updated:`, `fixed:`, `deleted:`).
 
-Não é preciso mexer no código dos carros: **a quantidade de carros e o destino de cada um vêm dos dados** (ver abaixo).
+Não é preciso mexer no código dos carros, do mapa orbital nem do loading: **a quantidade de carros, de órbitas e o destino de cada carro vêm dos dados** (ver abaixo). O título "Os N jogos" também conta sozinho. O loading pré-carrega as cenas do primeiro modelo da arena do Racing, sem lista escrita à mão.
 
 ## Os carros da pista
 
-- São **mocks neutros**: todos com a mesma pintura (cinza quente + faixa laranja da UI), **sem cor de modelo**. Durante a corrida eles não representam ninguém, então a fila nunca vira ordem de chegada.
+- São **mocks neutros**: todos com a mesma pintura (creme `#fff3e3` + faixa laranja da UI), **sem cor de modelo**. Durante a corrida eles não representam ninguém, então a fila nunca vira ordem de chegada.
 - **Quantidade = número de execuções atuais do Orbitarium** (`current_arena` do Orbitarium em `archive.json`). Entrou um modelo no Orbitarium, entra um carro; saiu, sai um carro. Nunca escrever o número 5 no código.
-- Depois da linha de chegada, cada carro flutua até o planeta de **um** modelo do Orbitarium (na ordem da arena) e só aí ganha a cor dele.
+- Andam **pela rolagem** (posição = função da rolagem, sem timer): parados no grid do hero com a página no topo, em fila a 58 px um do outro, sem ultrapassagem.
+- Depois da linha de chegada, cada carro flutua até o planeta de **um** modelo do Orbitarium (na ordem da arena) e só aí ganha a cor dele. O planeta fica escondido até o carro chegar.
+- Com `prefers-reduced-motion`: carros parados no grid, nada se desfaz, planetas visíveis desde o início.
 - **Modelo só no Racing:** aparece nos cards, no palco e no visor do Racing, nunca vira carro nem estrela. **Modelo só no Orbitarium:** vira estrela/planeta, sem precisar estar no Racing. Nenhum caso exige exceção no código.
+
+## O mapa e a pista (v2)
+
+- **Traçado:** nada de número fixo. Cada bloco da zona da corrida declara o lado em `data-track-side="left|right|full"` (hero, abertura do Racing, palco, jogos) e a linha de chegada é o elemento `data-track-finish`. `src/lib/track.ts` lê os retângulos reais e monta a pista (y sempre crescente). Bloco novo na zona da corrida: ponha o `data-track-side` e a classe `race-card`; a pista se ajusta sozinha.
+- **Cenário:** as peças (palmeira, casa, igreja…) são `<symbol>` em `src/components/race/SceneryDefs.tsx`; onde cada uma aparece está em `ZONES` de `src/lib/scenery.ts`. Para um mapa diferente, troque `SCENERY_SEED` no mesmo arquivo (mesma semente + mesma largura = mesmo mapa). Cores: tokens `--map-*` em `src/styles/tokens.css`.
+- **Orçamento:** o SVG do mapa fica abaixo de 650 elementos; `MAX_PIECES` em `scenery.ts` é o teto das peças. Peça nova com muitas formas: reduza o teto na mesma medida e atualize `SCENERY_DEF_ELEMENTS`.
+- **Motor da rolagem:** `src/components/race/RaceMap.tsx` (carros, chegada, pedaços, céu, planetas). Por quadro só `transform`/`opacity`.
+- **Loading:** `src/lib/boot.ts` (5 etapas reais, teto de 12 s) e `src/components/Loader.tsx`. Etapa nova = item novo em `BOOT_STEPS` e uma chamada de `markStep`.
+- **Cards creme:** dentro de `.race-card` os tokens escuros são reapontados (`--ink`, `--ink-2`, `--line`, `--warm`…), então componente novo ali já sai em navy sobre creme. Cor de modelo nunca vira cor de texto sobre creme (só tile, ponto e barra).
 
 ## Escolher a cor de um modelo novo
 
@@ -56,7 +67,7 @@ O carro chega sem cor; quem adiciona o modelo decide a cor dele. Para não estra
 2. **Se não tem**, escolha uma que cumpra todas as regras:
    - tom pastel luminoso, como as outras: em OKLCH, luminosidade entre 0,78 e 0,88 e croma entre 0,08 e 0,16;
    - matiz a pelo menos 25° de qualquer outra cor de modelo atual **do mesmo benchmark**;
-   - contraste de pelo menos 7:1 sobre `#080f1d` (texto do nome usa a cor);
+   - contraste de pelo menos 7:1 sobre `#080f1d`, e o texto navy `#0f1a2b` tem de ler bem em cima dela (no palco o nome vai em navy sobre tiles na cor do modelo);
    - **reservadas, não usar:** vermelho da zebra `#e8423a`, laranja da UI `#fdaf6d`/`#ffb76b`, ciano da UI `#85e4eb`/`#80e9f2`, branco puro;
    - conferir em print o chip, o ponto, a barra do card e o planeta lado a lado com as outras cores.
 3. Cor de modelo é **só identidade** (ponto, barra de 3 px, contorno, planeta). Nunca vira fundo grande nem botão.
@@ -66,7 +77,10 @@ O carro chega sem cor; quem adiciona o modelo decide a cor dele. Para não estra
 
 | O quê | Onde |
 |---|---|
-| Spec e regras de design | `_spec/spec.md` |
+| Spec e regras de design | `_spec/spec-v2.md` (v2) e `_spec/spec.md` (v1) |
+| Mapa, pista, carros, chegada | `src/components/race/`, `src/lib/track.ts`, `src/lib/scenery.ts` |
+| Loading (luzes de largada) | `src/lib/boot.ts`, `src/components/Loader.tsx` |
+| Hover "decifrar" dos nomes | `src/lib/scramble.ts`, `src/components/bits/DecryptedText.tsx` |
 | Esqueletos, mockups e protótipos | `design/` |
 | Script de dados | `scripts/sync.mjs` |
 | Dados gerados | `src/data/archive.json`, `public/scenes/` |

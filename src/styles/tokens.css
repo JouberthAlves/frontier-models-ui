@@ -24,6 +24,35 @@
   --seam-x: linear-gradient(90deg, #ffb76b, #80e9f2);
   --off-arena: #8fa5bf;
 
+  /* v2 map: pastel top-down scenery (spec-v2 §3.1) */
+  --map-grass: #b9dca0;
+  --map-grass-2: #a9d18e;
+  --map-grass-dark: #8fc07a;
+  --map-sand: #f3dfb8;
+  --map-sand-2: #ead09f;
+  --map-sea: #8fd3df;
+  --map-sea-deep: #6fc2d3;
+  --map-foam: #ffffff;
+  --map-roof: #e9a27f;
+  --map-roof-2: #d98a68;
+  --map-wall: #fbf3e6;
+  --map-tree: #7fbf7a;
+  --map-tree-2: #6aae68;
+  --map-trunk: #b58a63;
+  --map-rock: #c9c1b4;
+  --map-water: #9fd6e3;
+  --map-wood: #c79a6b;
+  --map-asphalt: #6d7486;
+  --map-kerb-red: #e8786f;
+  --map-kerb-white: #fbf7ef;
+  --map-shadow: rgba(40, 52, 40, 0.16);
+  --card-cream: #fff8ef;
+  --card-line: #ecdcc6;
+  --ink-navy: #0f1a2b;
+  --ink-navy-2: #465670;
+  --link-warm: #b4581b;
+  --scene-active: #e07b3c;
+
   /* type */
   --f-display: 'Anybody', 'Arial Narrow', sans-serif;
   --f-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
@@ -42,6 +71,7 @@
   --r-card: 14px;
   --r-chip: 999px;
   --r-img: 10px;
+  --r-race-card: 20px;
 
   /* layout */
   --page-max: 1240px;

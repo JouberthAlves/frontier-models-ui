@@ -8,6 +8,8 @@ import Archive from './components/Archive';
 import Footer from './components/Footer';
 import CompareBar from './components/CompareBar';
 import MotionNotice from './components/MotionNotice';
+import Loader from './components/Loader';
+import RaceMap from './components/race/RaceMap';
 import { useI18n } from './i18n/i18n';
 
 export default function App() {
@@ -19,16 +21,21 @@ export default function App() {
       </a>
       <Background />
       <Nav />
-      <main id="main" tabIndex={-1}>
-        <Hero />
-        <Racing />
-        <Orbitarium />
-        <Prompts />
-        <Archive />
-      </main>
-      <Footer />
+      {/* The map, the cars and the break-up layer sit behind <main>, in page coordinates. */}
+      <div className="page">
+        <RaceMap />
+        <main id="main" tabIndex={-1}>
+          <Hero />
+          <Racing />
+          <Orbitarium />
+          <Prompts />
+          <Archive />
+        </main>
+        <Footer />
+      </div>
       <MotionNotice />
       <CompareBar />
+      <Loader />
     </>
   );
 }

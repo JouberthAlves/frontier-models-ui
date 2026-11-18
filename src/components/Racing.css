@@ -1,5 +1,46 @@
-.racing__eyebrow {
-  color: var(--warm-soft);
+/* ---------- racing zone: cream cards that alternate sides over the map (spec-v2 §2.2) ---------- */
+.section.racing {
+  padding-top: var(--race-gap);
+  /* Anchor links land on the first card, not on the stretch of map above it. */
+  scroll-margin-top: calc(var(--nav-h) + 20px - var(--race-gap));
+}
+
+.racing__flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--race-gap);
+}
+
+.racing__block {
+  width: 100%;
+  min-width: 0;
+}
+
+.racing__block .section__head {
+  margin-bottom: 28px;
+}
+
+@media (min-width: 1100px) {
+  .racing__block--intro {
+    width: 58%;
+    align-self: flex-end;
+  }
+
+  .racing__block--games {
+    width: 62%;
+    align-self: flex-start;
+  }
+}
+
+/* Finish line (measured by RaceMap), then the end of the road and the zero-g stretch. */
+.racing__finish {
+  height: calc(260px + 62vh);
+  margin-top: calc(var(--finish-gap) - var(--race-gap));
+}
+
+.racing__finish-line {
+  display: block;
+  height: 0;
 }
 
 /* ---------- scene selector ---------- */
@@ -7,7 +48,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 40px;
 }
 
 @media (min-width: 768px) {
@@ -16,7 +56,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (max-width: 1099px) {
   .scene-tabs {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
@@ -30,13 +70,13 @@
   padding: 6px 6px 10px;
   border: 0;
   border-radius: 12px;
-  background: rgba(14, 32, 52, 0.6);
+  background: var(--card);
   box-shadow: inset 0 0 0 1px var(--line);
   text-align: left;
 }
 
 .scene-tab.is-active {
-  box-shadow: inset 0 0 0 2px var(--warm);
+  box-shadow: inset 0 0 0 2px var(--scene-active);
 }
 
 .scene-tab__thumb {
@@ -59,7 +99,7 @@
 }
 
 .scene-tab__n {
-  color: var(--warm-soft);
+  color: var(--link-warm);
   font-size: 13px;
 }
 
@@ -141,7 +181,7 @@
 
 /* ---------- the 6 games ---------- */
 .racing__games-title {
-  margin: clamp(56px, 8vw, 96px) 0 24px;
+  margin: 0 0 20px;
   font-size: 24px;
   font-weight: 700;
 }
@@ -223,7 +263,11 @@
 }
 
 .racing__note {
-  margin-top: 32px;
+  margin-top: 24px;
+}
+
+.game__name {
+  --decrypt-opacity: 1;
 }
 
 @media (hover: hover) {

@@ -1,0 +1,288 @@
+/* ---------- layers ---------- */
+.page {
+  position: relative;
+}
+
+.page > main,
+.page > footer {
+  position: relative;
+  z-index: 1;
+}
+
+.race-map,
+.race-fx,
+.race-cars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.race-map {
+  overflow: clip;
+}
+
+/* Before the first measure: plain ground behind the first screen, so the hero is readable. */
+.race-map--pending {
+  height: 100svh;
+  background: var(--map-grass);
+}
+
+.race-map__svg,
+.race-fx {
+  display: block;
+  max-width: none;
+}
+
+.race-fx {
+  overflow: hidden;
+}
+
+.race-cars {
+  height: 0;
+}
+
+/* ---------- map fills (one class per token) ---------- */
+.mf-shadow {
+  fill: var(--map-shadow);
+}
+.mf-grass-2 {
+  fill: var(--map-grass-2);
+}
+.mf-grass-dark {
+  fill: var(--map-grass-dark);
+}
+.mf-sand {
+  fill: var(--map-sand);
+}
+.mf-sea {
+  fill: var(--map-sea);
+}
+.mf-sea-deep {
+  fill: var(--map-sea-deep);
+}
+.mf-roof {
+  fill: var(--map-roof);
+}
+.mf-roof-2 {
+  fill: var(--map-roof-2);
+}
+.mf-wall {
+  fill: var(--map-wall);
+}
+.mf-tree {
+  fill: var(--map-tree);
+}
+.mf-tree-2 {
+  fill: var(--map-tree-2);
+}
+.mf-trunk {
+  fill: var(--map-trunk);
+}
+.mf-rock {
+  fill: var(--map-rock);
+}
+.mf-wood {
+  fill: var(--map-wood);
+}
+.mf-ridge {
+  fill: var(--map-wall);
+  opacity: 0.7;
+}
+.mf-ridge-line {
+  fill: none;
+  stroke: var(--map-wall);
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+.mf-fence {
+  fill: none;
+  stroke: var(--map-wood);
+  stroke-width: 3.5;
+  stroke-dasharray: 7 4;
+}
+.mf-fence-shadow {
+  fill: none;
+  stroke: var(--map-shadow);
+  stroke-width: 3.5;
+  stroke-dasharray: 7 4;
+}
+.mf-wake {
+  fill: none;
+  stroke: var(--map-foam);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.rm-stop-grass {
+  stop-color: var(--map-grass);
+}
+.rm-stop-grass-dark {
+  stop-color: var(--map-grass-dark);
+}
+
+.rm-foam {
+  fill: none;
+  stroke: var(--map-foam);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+}
+.rm-cliff,
+.rm-cliff-shadow {
+  fill: none;
+  stroke-width: 15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rm-cliff {
+  stroke: var(--map-sand-2);
+}
+.rm-cliff-shadow {
+  stroke: var(--map-shadow);
+}
+.rm-river,
+.rm-river-bank {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rm-river {
+  stroke: var(--map-water);
+}
+.rm-river-bank {
+  stroke: var(--map-sand-2);
+}
+.rm-bridge {
+  stroke: var(--map-trunk);
+  stroke-width: 2;
+}
+.rm-plank-line {
+  fill: none;
+  stroke: var(--map-trunk);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+/* ---------- road ---------- */
+.rm-road-shadow {
+  stroke: #000;
+  opacity: 0.12;
+}
+.rm-kerb-red {
+  stroke: var(--map-kerb-red);
+}
+.rm-kerb-white {
+  stroke: var(--map-kerb-white);
+}
+.rm-asphalt {
+  stroke: var(--map-asphalt);
+}
+.rm-centre {
+  stroke: rgba(255, 255, 255, 0.7);
+}
+.rm-slot {
+  fill: #fff;
+  opacity: 0.85;
+}
+.rm-flag__pole {
+  fill: none;
+  stroke: var(--ink-navy);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.rm-flag {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+}
+
+/* The flags wave once when the leading car crosses the line. */
+@media (prefers-reduced-motion: no-preference) {
+  .rm-flags.is-waving .rm-flag {
+    animation: rm-flag-wave 600ms ease-in-out 1;
+  }
+}
+
+@keyframes rm-flag-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(calc(var(--dir, 1) * 8deg));
+  }
+  70% {
+    transform: rotate(calc(var(--dir, 1) * -8deg));
+  }
+}
+
+/* ---------- pieces that break off ---------- */
+.fx-chunk--asphalt {
+  fill: var(--map-asphalt);
+}
+.fx-chunk--kerb-red {
+  fill: var(--map-kerb-red);
+}
+.fx-chunk--kerb-white {
+  fill: var(--map-kerb-white);
+}
+.fx-chunk--leaf {
+  fill: var(--map-tree);
+}
+.fx-chunk--roof {
+  fill: var(--map-roof);
+}
+.fx-star {
+  fill: #fff;
+  opacity: 0;
+}
+.fx-star--cool {
+  fill: #cfe8ff;
+}
+
+/* ---------- cars (neutral mocks: no model color on the track) ---------- */
+.race-car {
+  position: absolute;
+  left: -14px;
+  top: -22px;
+  width: 28px;
+  height: 44px;
+  will-change: transform;
+  visibility: hidden;
+}
+
+.race-cars[data-ready] .race-car {
+  visibility: visible;
+}
+
+.race-car svg {
+  overflow: visible;
+  max-width: none;
+}
+
+.race-car__shadow {
+  fill: rgba(20, 30, 40, 0.22);
+}
+.race-car__tyres {
+  fill: #1d1f25;
+}
+.race-car__paint {
+  fill: #fff3e3;
+}
+.race-car__tint {
+  fill: var(--model);
+  opacity: 0;
+}
+.race-car__stripe {
+  fill: #fdaf6d;
+}
+.race-car__glass {
+  fill: #2a3140;
+}
+.race-car__lights {
+  fill: #fff6d8;
+}

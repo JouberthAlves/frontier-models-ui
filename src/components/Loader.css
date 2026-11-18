@@ -1,0 +1,89 @@
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 24px;
+  background: var(--bg-0);
+  color: var(--ink-2);
+  transition: opacity 450ms ease;
+}
+
+.loader[data-phase='fading'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader__panel {
+  display: flex;
+  gap: clamp(8px, 2.4vw, 14px);
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: #0b0c10;
+  box-shadow: inset 0 0 0 1px #222a36;
+}
+
+.loader__col {
+  display: grid;
+  gap: 8px;
+}
+
+.loader__col i {
+  position: relative;
+  display: block;
+  width: clamp(28px, 7vw, 34px);
+  height: clamp(28px, 7vw, 34px);
+  border-radius: 50%;
+  background: #2b1515;
+}
+
+/* The lit lamp and its glow are layers that only change opacity. */
+.loader__col i::before,
+.loader__col i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #e8423a;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.loader__col i::after {
+  inset: -6px;
+  background: radial-gradient(circle, rgba(232, 66, 58, 0.75) 35%, rgba(232, 66, 58, 0) 70%);
+  z-index: -1;
+}
+
+.loader__col i {
+  isolation: isolate;
+}
+
+.loader__col.is-on i::before,
+.loader__col.is-on i::after {
+  opacity: 1;
+}
+
+.loader__text {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.loader__count {
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader {
+    transition: none;
+  }
+
+  /* No animated glow. */
+  .loader__col i::after {
+    display: none;
+  }
+}

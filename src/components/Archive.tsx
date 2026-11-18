@@ -1,3 +1,4 @@
+import DecryptedText from './bits/DecryptedText';
 import { useState } from 'react';
 import SectionTitle from './SectionTitle';
 import ExternalLink from './ExternalLink';
@@ -115,7 +116,9 @@ export default function Archive() {
                   <th scope="row">
                     <span className="archive__model" style={{ ['--dot' as string]: colorOf(run) }}>
                       <span className="dot" aria-hidden="true" />
-                      <span className="wrap-any">{run.model}</span>
+                      <span className="wrap-any">
+                        <DecryptedText text={run.model} animateOn="hover" tone={colorOf(run)} />
+                      </span>
                     </span>
                   </th>
                   <td>{BENCH_NAME[run.benchmark]}</td>
@@ -142,7 +145,9 @@ export default function Archive() {
             <li key={run.key} className="archive-card reveal-item" style={{ ['--i' as string]: Math.min(index, 8) }}>
               <p className="archive__model archive-card__name" style={{ ['--dot' as string]: colorOf(run) }}>
                 <span className="dot" aria-hidden="true" />
-                <span className="wrap-any">{run.model}</span>
+                <span className="wrap-any">
+                        <DecryptedText text={run.model} animateOn="hover" tone={colorOf(run)} />
+                      </span>
               </p>
               <dl className="archive-card__facts">
                 <div>

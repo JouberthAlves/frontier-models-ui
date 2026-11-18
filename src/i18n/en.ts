@@ -44,7 +44,7 @@ export const en: Dict = {
     code: 'Code',
     deleted: 'Deleted',
     enlarge: (alt: string) => `Enlarge: ${alt}`,
-    games: 'The 6 games',
+    games: (count: number) => `The ${count} games`,
     prompt: 'Prompt V3.4',
     compareAdd: 'Compare',
     compareIn: 'In comparison',
@@ -137,8 +137,12 @@ export const en: Dict = {
     credit: 'Background and text effects adapted from React Bits by David Haz (MIT + Commons Clause).',
     links: 'Archive links'
   },
+  loader: {
+    text: 'Loading the grid',
+    progress: (done: number, total: number) => `Loading ${done} of ${total}`
+  },
   notice: {
-    text: 'Simplified motion on this device: the background stays still.',
+    text: 'Simplified motion on this device: the cars stay on the grid and the background stays still.',
     close: 'Dismiss notice'
   },
   newTab: '(opens in a new tab)'

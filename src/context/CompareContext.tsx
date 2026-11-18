@@ -14,7 +14,9 @@ interface CompareValue {
 
 const CompareContext = createContext<CompareValue | null>(null);
 
-const DEFAULT_IDS = racingArena.slice(0, 2).map(run => run.id);
+/** Default comparison: the first two runs of the racing arena. */
+export const DEFAULT_COMPARE: Run[] = racingArena.slice(0, 2);
+const DEFAULT_IDS = DEFAULT_COMPARE.map(run => run.id);
 const byId = new Map(racingArena.map(run => [run.id, run]));
 
 export function CompareProvider({ children }: { children: ReactNode }) {

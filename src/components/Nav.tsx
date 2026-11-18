@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { useI18n, type Lang } from '../i18n/i18n';
 import './Nav.css';
 
@@ -6,30 +5,10 @@ const LANGS: Lang[] = ['pt', 'en'];
 
 export default function Nav() {
   const { t, lang, setLang } = useI18n();
-  const navRef = useRef<HTMLElement>(null);
 
-  // Solid backdrop after 40px of scroll (opacity of a pseudo-element, rAF-throttled).
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return undefined;
-    let raf = 0;
-    const update = () => {
-      raf = 0;
-      nav.classList.toggle('is-solid', window.scrollY > 40);
-    };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('scroll', onScroll);
-    };
-  }, []);
-
+  // Dark glass from the first screen: over the pastel map the nav is always the HUD.
   return (
-    <header ref={navRef} className="nav">
+    <header className="nav">
       <div className="nav__inner">
         <a className="nav__brand" href="#top" aria-label={t.nav.home}>
           <img src={`${import.meta.env.BASE_URL}favicon.svg`} width={22} height={22} alt="" />
