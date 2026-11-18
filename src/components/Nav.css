@@ -112,6 +112,14 @@
 }
 
 @media (max-width: 359px) {
+  /* 320 px: the wordmark narrower and a little room before PT / EN. */
+  .nav__brand {
+    padding-right: 10px;
+    letter-spacing: 0.02em;
+    font-stretch: 108%;
+    font-variation-settings: 'wdth' 108;
+  }
+
   .nav__brand span {
     font-size: 13px;
   }

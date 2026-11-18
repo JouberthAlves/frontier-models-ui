@@ -266,6 +266,9 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
       // Lights up once: when the first car jumps off the road, or when the title comes into view.
       let ignite = 0;
       let lit = isRoadBroken();
+      // Wall-clock start of the ignition: it ends 1.2 s later however few frames get drawn
+      // (slow phones, throttled panes), instead of crawling one capped frame step at a time.
+      let litAt = lit ? performance.now() : 0;
       let raf = 0;
       let lastTick = 0;
       let lastRender = 0;
@@ -327,8 +330,11 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
           lastRender = now;
           time += dt;
           // Arriving below the hero without having seen it (a reload half-way down the page).
-          if (!lit && explode() > 0) lit = true;
-          if (lit && ignite < 1) ignite = Math.min(1, ignite + (dt * 1000) / SPIRAL_IGNITE_MS);
+          if (!lit && explode() > 0) {
+            lit = true;
+            litAt = now;
+          }
+          if (lit && ignite < 1) ignite = Math.min(1, (now - litAt) / SPIRAL_IGNITE_MS);
           render();
         }
         raf = requestAnimationFrame(frame);
@@ -372,6 +378,7 @@ export default function SpiralGalaxy({ points, frameRateCap = 0, paused = false,
       };
 
       const light = () => {
+        if (!lit) litAt = performance.now();
         lit = true;
         wake();
       };
