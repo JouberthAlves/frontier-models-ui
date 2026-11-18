@@ -105,12 +105,13 @@ export default function OrbitMap({ runs, selectedKey, onSelect }: OrbitMapProps)
       aria-label={t.orbitarium.map}
     >
       <defs>
-        {/* The sun: a soft white glow. */}
+        {/* The sun: warm (owner, 2026-11-18) — white-hot core, yellow body, orange glow. */}
         <radialGradient id="orbit-star" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fff" />
-          <stop offset="22%" stopColor="#fff" stopOpacity="0.95" />
-          <stop offset="45%" stopColor="#fff" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0%" stopColor="#fff6dc" />
+          <stop offset="18%" stopColor="#ffd666" stopOpacity="0.98" />
+          <stop offset="34%" stopColor="#ffab3d" stopOpacity="0.7" />
+          <stop offset="60%" stopColor="#ff8a2a" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#ff8a2a" stopOpacity="0" />
         </radialGradient>
         {/* Light from the upper left and shade on the far side: makes a flat disc a small sphere. */}
         <radialGradient id="orbit-shade" cx="34%" cy="30%" r="78%">

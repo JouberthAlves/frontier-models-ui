@@ -36,8 +36,7 @@
 
 .hero__title-art {
   display: block;
-  /* White letters with a thick navy outline and a short shadow (sticker look): readable on sand. */
-  filter: drop-shadow(0 5px 0 rgba(15, 26, 43, 0.28));
+  /* Plain white letters (owner, 2026-11-18): no outline, no shadow. */
   font-size: min(clamp(56px, 12.5vw, 220px), calc(100cqi / var(--title-wem, 6.6)));
   line-height: 0.86;
   letter-spacing: -0.02em;

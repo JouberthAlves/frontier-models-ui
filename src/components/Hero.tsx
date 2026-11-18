@@ -35,7 +35,7 @@ export default function Hero() {
             <span ref={artRef} className="hero__title-art" aria-hidden="true">
               <StrokeText
                 lines={TITLE_LINES}
-                strokeColor="var(--ink-navy)"
+                strokeColor="#ffffff"
                 fill="#ffffff"
                 onMeasure={onMeasure}
                 trigger="controlled"
@@ -48,7 +48,7 @@ export default function Hero() {
                 fillDuration={0.8}
                 fillEase="power2.inOut"
                 fillMode="wipe"
-                strokeWidth={16}
+                strokeWidth={3}
                 fontWeight={900}
                 fontStretch={125}
                 letterSpacing={-4}
