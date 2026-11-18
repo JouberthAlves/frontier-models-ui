@@ -4,8 +4,17 @@ import { orbitArena } from '../../data/archive';
 import { colorOf } from '../../data/models';
 import { markStep } from '../../lib/boot';
 import { useReducedMotion } from '../../lib/motion';
-import { buildChunks, buildScenery, type Chunk, type Scenery } from '../../lib/scenery';
-import { buildTrack, CAR_SPACING, type BlockRect, type Track, type TrackSide } from '../../lib/track';
+import {
+  buildChunks,
+  buildScenery,
+  buildSlices,
+  type Chunk,
+  type ChunkKind,
+  type Rect,
+  type Scenery,
+  type TailSlice
+} from '../../lib/scenery';
+import { buildTrack, CAR_SPACING, TRACK_STEP, type BlockRect, type Track, type TrackSide } from '../../lib/track';
 import './RaceMap.css';
 
 /**
@@ -25,6 +34,14 @@ const BAND = 220;
 const TINT_GOLD = [255, 196, 120] as const;
 const TINT_DUSK = [60, 70, 120] as const;
 const TINT_NIGHT = [16, 30, 53] as const;
+/** Same colors as the --map-* tokens: the pieces that break off are tinted for their hour of the day. */
+const CHUNK_RGB: Record<ChunkKind, readonly number[]> = {
+  asphalt: [109, 116, 134],
+  'kerb-red': [232, 120, 111],
+  'kerb-white': [251, 247, 239],
+  leaf: [127, 191, 122],
+  roof: [233, 162, 127]
+};
 
 interface Layout {
   W: number;
@@ -33,7 +50,10 @@ interface Layout {
   breakLen: number;
   track: Track;
   scenery: Scenery;
+  slices: TailSlice[];
   chunks: Chunk[];
+  /** Phones: per track sample, how hidden a car is there (1 = under a card). Null on wider screens. */
+  cover: Float32Array | null;
   /** Document y the leading car is at when its flight ends. */
   floatEndY: number;
   signature: number[];
@@ -52,12 +72,21 @@ const bez = (p0: number, p1: number, p2: number, p3: number, t: number) => {
 };
 const rgba = (rgb: readonly number[], alpha: number) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha.toFixed(3)})`;
 
-/** Dusk tint at a fraction of the map height (between the 50% and the last stops). */
+/** Dusk tint at a fraction of the map height (from the 50% stop down). */
 function duskAt(f: number, nightAt: number): { rgb: number[]; alpha: number } {
   if (f <= 0.5) return { rgb: [...TINT_DUSK], alpha: 0 };
   if (f <= 0.85) return { rgb: [...TINT_DUSK], alpha: (0.18 * (f - 0.5)) / 0.35 };
-  const t = clamp((f - 0.85) / Math.max(0.001, nightAt - 0.85));
-  return { rgb: TINT_DUSK.map((value, index) => mix(value, TINT_NIGHT[index], t)), alpha: mix(0.18, 0.5, t) };
+  if (f <= nightAt) {
+    const t = clamp((f - 0.85) / Math.max(0.001, nightAt - 0.85));
+    return { rgb: TINT_DUSK.map((value, index) => mix(value, TINT_NIGHT[index], t)), alpha: mix(0.18, 0.5, t) };
+  }
+  return { rgb: [...TINT_NIGHT], alpha: 0.5 * clamp((1 - f) / Math.max(0.001, 1 - nightAt)) };
+}
+
+/** A map color as it looks under the dusk tint at that height. */
+function tinted(rgb: readonly number[], f: number, nightAt: number): string {
+  const tint = duskAt(f, nightAt);
+  return `rgb(${rgb.map((value, index) => Math.round(mix(value, tint.rgb[index], tint.alpha))).join(',')})`;
 }
 
 function measure(root: HTMLElement, previous: Layout | null): Layout | null {
@@ -68,16 +97,23 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
   const heroNode = document.getElementById('top');
   if (!nodes.length || !finishNode || W < 200) return null;
 
+  const rectOf = (node: Element): Rect => {
+    const rect = node.getBoundingClientRect();
+    return { left: rect.left - origin.left, right: rect.right - origin.left, top: rect.top - origin.top, bottom: rect.bottom - origin.top };
+  };
+  // Blocks that are not cards (the hero) sit straight on the map: only their text and buttons
+  // are kept clear of scenery, not the whole box.
+  const calm: Rect[] = [];
   const blocks: BlockRect[] = nodes
     .map(node => {
-      const rect = node.getBoundingClientRect();
-      return {
-        left: rect.left - origin.left,
-        right: rect.right - origin.left,
-        top: rect.top - origin.top,
-        bottom: rect.bottom - origin.top,
-        side: (node.dataset.trackSide as TrackSide) ?? 'full'
-      };
+      const opaque = node.classList.contains('race-card');
+      if (!opaque) {
+        Array.from(node.children).forEach(child => {
+          const rect = rectOf(child);
+          if (rect.bottom > rect.top && rect.right > rect.left) calm.push(rect);
+        });
+      }
+      return { ...rectOf(node), side: (node.dataset.trackSide as TrackSide) ?? 'full', opaque };
     })
     .filter(block => block.bottom > block.top)
     .sort((a, b) => a.top - b.top);
@@ -115,21 +151,54 @@ function measure(root: HTMLElement, previous: Layout | null): Layout | null {
   const H = track.endY + 40;
   const breakY = Math.max(blocks[0].bottom, finishY - BREAK_BEFORE_FINISH);
   const breakLen = track.lenAtY(breakY);
-  const scenery = buildScenery({ width: W, height: H, breakY, blocks, track, contentLeft });
-  const chunks = buildChunks(track, breakLen, scenery.pieces, W);
-  return { W, H, breakY, breakLen, track, scenery, chunks, floatEndY, signature };
+  const scenery = buildScenery({ width: W, height: H, breakY, blocks, calm, track, contentLeft });
+  const slices = buildSlices(track, breakLen);
+  const chunks = buildChunks(track, breakLen, slices, scenery.pieces, W);
+
+  // Phones: the road runs behind the cards, so a car beside one would show as a sliver past its
+  // edge. Per sample: is the centre line under a card? Blurred over ±24 px, so cars fade.
+  let cover: Float32Array | null = null;
+  if (W < 768) {
+    const cards = blocks.filter(block => block.opaque);
+    const count = Math.ceil(track.length / TRACK_STEP) + 1;
+    const raw = new Uint8Array(count);
+    for (let i = 0; i < count; i += 1) {
+      const p = track.at(i * TRACK_STEP);
+      raw[i] = cards.some(b => p.x > b.left && p.x < b.right && p.y > b.top && p.y < b.bottom) ? 1 : 0;
+    }
+    cover = new Float32Array(count);
+    const reach = 6;
+    for (let i = 0; i < count; i += 1) {
+      let sum = 0;
+      for (let k = -reach; k <= reach; k += 1) sum += raw[clamp(i + k, 0, count - 1)];
+      cover[i] = sum / (reach * 2 + 1);
+    }
+  }
+
+  return { W, H, breakY, breakLen, track, scenery, slices, chunks, cover, floatEndY, signature };
 }
 
+/** Kerbs, asphalt and centre line of one stretch of road (the soft shadow is drawn apart). */
 function Road({ id, offset, roadW }: { id: string; offset: number; roadW: number }) {
   const href = `#${id}`;
   return (
-    <g fill="none" strokeLinejoin="round">
-      <use href={href} className="rm-road-shadow" strokeWidth={roadW + 12} transform="translate(3 4)" />
+    <>
       <use href={href} className="rm-kerb-red" strokeWidth={roadW + 10} />
       <use href={href} className="rm-kerb-white" strokeWidth={roadW + 10} strokeDasharray="14 14" strokeDashoffset={offset % 28} />
       <use href={href} className="rm-asphalt" strokeWidth={roadW} />
       <use href={href} className="rm-centre" strokeWidth={2} strokeDasharray="18 22" strokeDashoffset={offset % 40} />
-    </g>
+    </>
+  );
+}
+
+/** Soft shadow under the road: two wide, faint strokes (a cheap blur, no filter on a huge path). */
+function RoadShadow({ id, roadW }: { id: string; roadW: number }) {
+  const href = `#${id}`;
+  return (
+    <>
+      <use href={href} className="rm-road-shadow" strokeWidth={roadW + 22} transform="translate(3 4)" />
+      <use href={href} className="rm-road-shadow" strokeWidth={roadW + 13} transform="translate(3 4)" />
+    </>
   );
 }
 
@@ -141,7 +210,7 @@ function Pieces({ scenery, tail }: { scenery: Scenery; tail: boolean }) {
           <use
             key={index}
             href={`#sc-${piece.id}`}
-            transform={`translate(${piece.x.toFixed(1)} ${piece.y.toFixed(1)})${piece.r ? ` rotate(${piece.r})` : ''} scale(${piece.s.toFixed(2)})`}
+            transform={`translate(${piece.x.toFixed(1)} ${piece.y.toFixed(1)})${piece.r ? ` rotate(${piece.r.toFixed(0)})` : ''} scale(${piece.s.toFixed(2)})`}
           />
         ) : null
       )}
@@ -154,7 +223,6 @@ export default function RaceMap() {
   const rootRef = useRef<HTMLDivElement>(null);
   const carsRef = useRef<HTMLDivElement>(null);
   const fxRef = useRef<SVGSVGElement>(null);
-  const tailRef = useRef<SVGGElement>(null);
   const flagsRef = useRef<SVGGElement>(null);
   const [layout, setLayout] = useState<Layout | null>(null);
 
@@ -199,8 +267,9 @@ export default function RaceMap() {
   // The scroll-driven engine: cars, finish flags, break-up, sky and planets.
   useLayoutEffect(() => {
     const carsRoot = carsRef.current;
-    if (!layout || !carsRoot) return undefined;
-    const { track, W, chunks, floatEndY } = layout;
+    const root = rootRef.current;
+    if (!layout || !carsRoot || !root) return undefined;
+    const { track, W, chunks, slices, cover, breakLen, floatEndY } = layout;
     const cars = Array.from(carsRoot.querySelectorAll<HTMLElement>('.race-car')).map(el => ({
       el,
       tint: el.querySelector<SVGElement>('.race-car__tint')
@@ -211,16 +280,25 @@ export default function RaceMap() {
     const gridY = track.at(gridLead).y;
     const end = track.at(track.length);
     const floatSpan = Math.max(300, floatEndY - track.endY);
+    const slotShift = track.roadW * 0.16;
     // Page origin of the layers (read once per layout, never per frame).
     const originRect = carsRoot.getBoundingClientRect();
     const originX = originRect.left + window.scrollX;
     const originY = originRect.top + window.scrollY;
 
-    const placeOnTrack = (index: number, length: number, wobble: number) => {
+    /** `onGrid` 1 → 0: each car leaves its own grid slot (left / right) and joins the centre line. */
+    const placeOnTrack = (index: number, length: number, wobble: number, onGrid: number) => {
       const p = track.at(length);
       const car = cars[index];
-      car.el.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) rotate(${(p.angle - 90 + wobble).toFixed(1)}deg) scale(${scale})`;
-      car.el.style.opacity = '1';
+      let { x, y } = p;
+      if (onGrid > 0) {
+        const a = (p.angle * Math.PI) / 180;
+        const shift = (index % 2 ? 1 : -1) * slotShift * onGrid;
+        x += Math.sin(a) * shift;
+        y -= Math.cos(a) * shift;
+      }
+      car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${(p.angle - 90 + wobble).toFixed(1)}deg) scale(${scale})`;
+      car.el.style.opacity = cover ? (1 - cover[clamp(Math.round(length / TRACK_STEP), 0, cover.length - 1)]).toFixed(2) : '1';
       if (car.tint) car.tint.style.opacity = '0';
     };
 
@@ -228,14 +306,17 @@ export default function RaceMap() {
 
     if (reduced) {
       // Reduced motion: cars parked on the grid, nothing breaks, planets stay visible.
-      for (let i = 0; i < count; i += 1) placeOnTrack(i, gridLead - i * CAR_SPACING, 0);
+      for (let i = 0; i < count; i += 1) placeOnTrack(i, gridLead - i * CAR_SPACING, 0, 1);
       return undefined;
     }
 
     const sky = document.querySelector<HTMLElement>('[data-race-sky]');
     const fx = fxRef.current;
-    const tail = tailRef.current;
     const flags = flagsRef.current;
+    // Tail of the map: the ground, scenery and dusk tint fade together; the road goes slice by slice.
+    const tailLayers = Array.from(root.querySelectorAll<SVGElement>('[data-tail]'));
+    const tailShadow = root.querySelector<SVGElement>('[data-tail-shadow]');
+    const sliceNodes = Array.from(root.querySelectorAll<SVGElement>('[data-slice]'));
     const chunkNodes = fx
       ? Array.from(fx.querySelectorAll<SVGGElement>('[data-chunk]')).map(g => ({
           g,
@@ -243,6 +324,7 @@ export default function RaceMap() {
           star: g.lastElementChild as SVGElement | null
         }))
       : [];
+    const chunkState = new Float32Array(chunkNodes.length).fill(-2);
     let planets: { wrap: HTMLElement | SVGElement; body: Element | null }[] = [];
     const planetShown: number[] = [];
     const findPlanets = () => {
@@ -261,9 +343,20 @@ export default function RaceMap() {
       planet.wrap.dataset.arrival = value === 0 ? 'waiting' : value >= 0.5 ? 'arrived' : 'landing';
     };
 
+    // The break front: a length along the track. It starts at the top of the last stretch when
+    // the leading car crosses the finish line, follows the cars (always behind the last one) and
+    // reaches the end of the road just after the last car has left it. The road fades slice by
+    // slice as the front passes, and each shard lets go when the front reaches it.
+    const tailSpan = Math.max(1, track.length - breakLen);
+    const carsSpan = (count - 1) * CAR_SPACING;
+    const frontRun = track.length + carsSpan + 60 - track.finishLen;
+    /** Front travel a shard takes to drift off and turn into a star. */
+    const drift = tailSpan * 0.75;
+
     let raf = 0;
     let lastLead = NaN;
     let lastT = NaN;
+    let lastFront = NaN;
     let lastVh = 0;
 
     const update = () => {
@@ -284,21 +377,46 @@ export default function RaceMap() {
       if (T !== lastT) {
         lastT = T;
         if (sky) sky.style.opacity = smooth(T).toFixed(3);
-        if (tail) tail.style.opacity = (1 - smooth((T - 0.2) / 0.55)).toFixed(3);
         flags?.classList.toggle('is-waving', lead >= track.finishLen);
+      }
+
+      const progress = (lead - track.finishLen) / frontRun;
+      const front = progress <= 0 ? -1 : Math.min(breakLen + progress * tailSpan, lead - carsSpan - 30);
+      if (front !== lastFront) {
+        lastFront = front;
+        const ground = (1 - smooth((progress - 0.12) / 0.8)).toFixed(3);
+        tailLayers.forEach(node => {
+          node.style.opacity = ground;
+        });
+        if (tailShadow) tailShadow.style.opacity = (1 - clamp(progress * 3)).toFixed(3);
+        sliceNodes.forEach((node, index) => {
+          const slice = slices[index];
+          if (slice) node.style.opacity = (1 - clamp((front - slice.from) / (slice.to - slice.from + 40))).toFixed(3);
+        });
         if (fx) {
-          fx.style.display = T > 0 ? 'block' : 'none';
-          if (T > 0) {
+          fx.style.display = front > 0 ? 'block' : 'none';
+          if (front > 0) {
             chunkNodes.forEach((node, index) => {
               const chunk = chunks[index];
               if (!chunk || !node.body || !node.star) return;
-              const t = ease(clamp((T - chunk.delay) / (1 - chunk.delay)));
-              const x = chunk.x + chunk.dx * t;
-              const y = chunk.y + chunk.dy * t;
-              node.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(chunk.rot * t).toFixed(1)})`);
-              node.body.setAttribute('transform', `scale(${mix(1, 0.2, t).toFixed(3)})`);
-              node.body.style.opacity = t <= 0 ? '0' : (1 - clamp((t - 0.55) / 0.3)).toFixed(3);
-              node.star.style.opacity = (clamp((t - 0.5) / 0.3) * chunk.glow).toFixed(3);
+              const shown = front >= chunk.show;
+              const t = shown ? clamp((front - chunk.at) / drift) : -1;
+              // Not there yet, still in place, or already a star: nothing to redo.
+              if (t === chunkState[index]) return;
+              chunkState[index] = t;
+              if (!shown) {
+                node.body.style.opacity = '0';
+                node.star.style.opacity = '0';
+                return;
+              }
+              const e = ease(t);
+              const x = chunk.x + chunk.dx * e;
+              const y = chunk.y + chunk.dy * e;
+              node.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(chunk.turn + chunk.rot * e).toFixed(1)})`);
+              node.body.setAttribute('transform', `scale(${mix(1, 0.2, e).toFixed(3)})`);
+              const fadeIn = chunk.kind === 'leaf' || chunk.kind === 'roof' ? clamp((front - chunk.show) / 60) : 1;
+              node.body.style.opacity = (fadeIn * (1 - clamp((e - 0.55) / 0.3))).toFixed(3);
+              node.star.style.opacity = (clamp((e - 0.5) / 0.3) * chunk.glow).toFixed(3);
             });
           }
         }
@@ -306,16 +424,20 @@ export default function RaceMap() {
 
       if (lead > track.length && (!planets.length || !planets[0].wrap.isConnected)) findPlanets();
 
+      const onGrid = 1 - smooth((lead - gridLead) / 160);
       for (let i = 0; i < count; i += 1) {
         const d = lead - i * CAR_SPACING;
         const car = cars[i];
         if (d <= track.length) {
-          placeOnTrack(i, Math.max(0, d), wobble);
+          placeOnTrack(i, Math.max(0, d), wobble, onGrid);
           if (planets.length) showPlanet(i, 0);
           continue;
         }
-        // Zero-g: a cubic Bézier from the end of the road to this car's planet.
-        const t = ease(clamp((d - track.length) / floatSpan));
+        // Zero-g: a cubic Bézier from the end of the road to this car's planet. The car leaves
+        // the road straight ahead at the speed it had on it (so the line keeps its spacing: no
+        // pile-up at the end of the road) and slows down as it reaches the planet.
+        const u = clamp((d - track.length) / floatSpan);
+        const t = u * (1 + 0.5 * u - 0.5 * u * u);
         const planetOpacity = clamp((t - 0.75) / 0.25);
         showPlanet(i, planetOpacity);
         if (t >= 1) {
@@ -326,11 +448,10 @@ export default function RaceMap() {
         const tx = rect ? rect.left + rect.width / 2 + window.scrollX - originX : W / 2;
         const ty = rect ? rect.top + rect.height / 2 + sy - originY : floatEndY;
         const side = i % 2 ? 1 : -1;
-        const c1 = clamp(end.x + side * (120 + (i % 4) * 40), 24, W - 24);
         const c2 = clamp(tx - side * 160, 24, W - 24);
-        const x = bez(end.x, c1, c2, tx, t);
-        const y = bez(end.y, end.y + 160, ty - 260, ty, t);
-        const turn = t * (220 + (i % 4) * 60) * side;
+        const x = bez(end.x, end.x, c2, tx, t);
+        const y = bez(end.y, end.y + floatSpan / 3, ty - 260, ty, t);
+        const turn = t * t * (220 + (i % 4) * 60) * side;
         car.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${turn.toFixed(1)}deg) scale(${(scale * mix(1, 0.55, t)).toFixed(3)})`;
         car.el.style.opacity = (1 - clamp((t - 0.75) / 0.2)).toFixed(3);
         if (car.tint) car.tint.style.opacity = clamp(t * 1.4).toFixed(3);
@@ -349,6 +470,9 @@ export default function RaceMap() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
       if (sky) sky.style.opacity = '';
+      [...tailLayers, ...sliceNodes, ...(tailShadow ? [tailShadow] : [])].forEach(node => {
+        node.style.opacity = '';
+      });
       planets.forEach(planet => {
         planet.wrap.style.opacity = '';
         delete planet.wrap.dataset.arrival;
@@ -383,16 +507,33 @@ export default function RaceMap() {
     );
   }
 
-  const { W, H, breakY, breakLen, track, scenery, chunks } = layout;
+  const { W, H, breakY, breakLen, track, scenery, slices, chunks } = layout;
   const roadW = track.roadW;
   const finish = track.at(track.finishLen);
   const nightAt = (H - 170) / H;
+  const bandEnd = breakY + BAND;
   const atBreak = duskAt(breakY / H, nightAt);
+  const atBandEnd = duskAt(bandEnd / H, nightAt);
+  // The body tint fades out over the band below the break line while the tail tint fades in,
+  // so the two add up to one continuous dusk.
+  const tailStops: { at: number; color: string }[] = [
+    { at: breakY / H, color: rgba(atBandEnd.rgb, 0) },
+    { at: bandEnd / H, color: rgba(atBandEnd.rgb, atBandEnd.alpha) }
+  ];
+  if (bandEnd / H < 0.85) tailStops.push({ at: 0.85, color: rgba(TINT_DUSK, 0.18) });
+  if (bandEnd / H < nightAt) tailStops.push({ at: nightAt, color: rgba(TINT_NIGHT, 0.5) });
+  tailStops.push({ at: 1, color: rgba(TINT_NIGHT, 0) });
   const slots = orbitArena.map((run, index) => {
     const p = track.at(track.gridLead - index * CAR_SPACING + 24);
     return { key: run.key, x: p.x + (index % 2 ? 1 : -1) * roadW * 0.16, y: p.y };
   });
   const startLine = track.at(track.gridLead + 34);
+  const sliceStart = (slice: TailSlice) => Math.floor(slice.from / TRACK_STEP) * TRACK_STEP;
+  const finishSlice = Math.max(
+    0,
+    slices.findIndex(slice => track.finishLen < slice.to)
+  );
+  const { village, bridge, cliff } = scenery;
 
   return (
     <>
@@ -404,16 +545,16 @@ export default function RaceMap() {
               <rect width="12" height="12" fill="#fbf7ef" />
               <path d="M0 0h6v6h-6zM6 6h6v6h-6z" fill="#161a22" />
             </pattern>
-            <pattern id="rm-planks" width="8" height="8" patternUnits="userSpaceOnUse">
-              <rect width="8" height="8" className="mf-wood" />
-              <path d="M0 0V8" className="rm-plank-line" />
+            <pattern id="rm-planks" width="9" height="9" patternUnits="userSpaceOnUse">
+              <rect width="9" height="9" className="mf-wood" />
+              <path d="M0 0.5H9" className="rm-plank-line" />
             </pattern>
             <pattern id="rm-stand" width="30" height="24" patternUnits="userSpaceOnUse">
               <rect width="30" height="8" className="mf-roof" />
               <rect y="8" width="30" height="8" className="mf-wall" />
               <rect y="16" width="30" height="8" className="mf-sea-deep" />
             </pattern>
-            <linearGradient id="rm-ground-body" gradientUnits="userSpaceOnUse" x1="0" y1={breakY} x2="0" y2={breakY + BAND}>
+            <linearGradient id="rm-ground-body" gradientUnits="userSpaceOnUse" x1="0" y1={breakY} x2="0" y2={bandEnd}>
               <stop offset="0" className="rm-stop-grass" />
               <stop offset="1" className="rm-stop-grass" stopOpacity="0" />
             </linearGradient>
@@ -423,88 +564,123 @@ export default function RaceMap() {
               <stop offset="1" className="rm-stop-grass-dark" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="rm-tint-tail" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={H}>
-              <stop offset="0" stopColor={rgba(TINT_GOLD, 0.16)} />
-              <stop offset="0.5" stopColor={rgba(TINT_GOLD, 0)} />
-              <stop offset="0.5" stopColor={rgba(TINT_DUSK, 0)} />
-              <stop offset="0.85" stopColor={rgba(TINT_DUSK, 0.18)} />
-              <stop offset={nightAt.toFixed(4)} stopColor={rgba(TINT_NIGHT, 0.5)} />
-              <stop offset="1" stopColor={rgba(TINT_NIGHT, 0)} />
+              {tailStops.map((stop, index) => (
+                <stop key={index} offset={clamp(stop.at).toFixed(4)} stopColor={stop.color} />
+              ))}
             </linearGradient>
             <linearGradient id="rm-tint-body" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={H}>
               <stop offset="0" stopColor={rgba(TINT_GOLD, 0.16)} />
               <stop offset="0.5" stopColor={rgba(TINT_GOLD, 0)} />
               <stop offset="0.5" stopColor={rgba(TINT_DUSK, 0)} />
               <stop offset={Math.max(0.5, breakY / H).toFixed(4)} stopColor={rgba(atBreak.rgb, atBreak.alpha)} />
-              <stop offset={Math.max(0.5, (breakY + BAND) / H).toFixed(4)} stopColor={rgba(atBreak.rgb, 0)} />
+              <stop offset={Math.max(0.5, bandEnd / H).toFixed(4)} stopColor={rgba(atBreak.rgb, 0)} />
             </linearGradient>
             <path id="rm-road-body" d={track.slice(0, breakLen)} />
             <path id="rm-road-tail" d={track.slice(breakLen, track.length)} />
+            {slices.map((slice, index) => (
+              <path key={index} id={`rm-slice-${index}`} d={track.slice(slice.from, slice.to)} />
+            ))}
           </defs>
 
-          {/* Last stretch: fades and breaks up after the finish line. Drawn under the rest. */}
-          <g ref={tailRef} className="race-map__tail">
+          {/* Ground of the last stretch: fades after the finish line. Drawn under everything. */}
+          <g data-tail="ground">
             <rect x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-ground-tail)" />
-            {scenery.patches.map((patch, index) =>
-              patch.tail ? <ellipse key={index} cx={patch.cx} cy={patch.cy} rx={patch.rx} ry={patch.ry} className="mf-grass-2" /> : null
-            )}
+            {scenery.patches.map((patch, index) => (patch.tail ? <path key={index} d={patch.d} className="mf-grass-2" /> : null))}
             <rect x={scenery.stand.x} y={scenery.stand.y} width={scenery.stand.w} height={scenery.stand.h} rx="4" fill="url(#rm-stand)" />
-            <Road id="rm-road-tail" offset={breakLen} roadW={roadW} />
-            <rect x={finish.x - (roadW + 10) / 2} y={finish.y - 7} width={roadW + 10} height="14" fill="url(#rm-check)" />
-            <g ref={flagsRef} className="rm-flags">
-              {[-1, 1].map(side => (
-                <g key={side} transform={`translate(${(finish.x + side * (roadW / 2 + 12)).toFixed(1)} ${(finish.y + 4).toFixed(1)})`}>
-                  <g className="rm-flag" style={{ ['--dir' as string]: side }}>
-                    <path d="M0 0V-28" className="rm-flag__pole" />
-                    <path d="M0 -28h15v10h-15z" fill="url(#rm-check)" />
-                  </g>
-                </g>
-              ))}
-            </g>
-            <Pieces scenery={scenery} tail />
-            {scenery.stars.map((star, index) => (
-              <circle key={index} cx={star.x.toFixed(1)} cy={star.y.toFixed(1)} r={star.r.toFixed(2)} fill="#fff" opacity={star.o.toFixed(2)} />
-            ))}
-            <rect x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-tint-tail)" />
           </g>
 
-          <g className="race-map__body">
-            <rect x="0" y="0" width={W} height={breakY + BAND} fill="url(#rm-ground-body)" />
-            {scenery.patches.map((patch, index) =>
-              patch.tail ? null : <ellipse key={index} cx={patch.cx} cy={patch.cy} rx={patch.rx} ry={patch.ry} className="mf-grass-2" />
-            )}
-            <path d={scenery.sand} className="mf-sand" />
-            <path d={scenery.seaTop} className="mf-sea" />
-            <path d={scenery.seaDeep} className="mf-sea-deep" />
-            <path d={scenery.foam} className="rm-foam" />
-            {scenery.cove && <path d={scenery.cove} className="mf-sea" />}
-            {scenery.coveFoam && <path d={scenery.coveFoam} className="rm-foam" />}
-            {scenery.cliff && <path d={scenery.cliff} className="rm-cliff-shadow" transform="translate(0 7)" />}
-            {scenery.cliff && <path d={scenery.cliff} className="rm-cliff" />}
-            {scenery.plaza && (
-              <ellipse cx={scenery.plaza.cx} cy={scenery.plaza.cy} rx={scenery.plaza.rx} ry={scenery.plaza.ry} className="mf-sand" />
-            )}
-            {scenery.river && <path d={scenery.river.d} className="rm-river-bank" strokeWidth={scenery.river.width + 8} />}
-            {scenery.river && <path d={scenery.river.d} className="rm-river" strokeWidth={scenery.river.width} />}
-            {scenery.bridge && (
+          {/* Ground of the rest of the map. Its lower band fades into the last stretch. */}
+          <rect x="0" y="0" width={W} height={bandEnd} fill="url(#rm-ground-body)" />
+          {scenery.patches.map((patch, index) => (patch.tail ? null : <path key={index} d={patch.d} className="mf-grass-2" />))}
+          <path d={scenery.sand} className="mf-sand" />
+          <path d={scenery.wetSand} className="rm-wet-sand" />
+          <path d={scenery.shallow} className="mf-shallow" />
+          {scenery.sea && <path d={scenery.sea} className="mf-sea" />}
+          {scenery.seaDeep && <path d={scenery.seaDeep} className="mf-sea-deep" />}
+          <path d={scenery.foam} className="rm-foam" />
+          {scenery.foamInner && <path d={scenery.foamInner} className="rm-foam rm-foam--inner" />}
+          {scenery.cove && <path d={scenery.cove} className="mf-sea" />}
+          {scenery.coveFoam && <path d={scenery.coveFoam} className="rm-foam" />}
+          {cliff && <path d={cliff.face} className="mf-shadow" transform="translate(3 9)" />}
+          {cliff && <path d={cliff.face} className="mf-sand-2" />}
+          {cliff && <path d={cliff.lip} className="rm-cliff-lip" />}
+          {village && (
+            <>
+              <path d={village.streets} className="rm-street" strokeWidth={village.streetWidth} />
               <rect
-                x={-scenery.bridge.w / 2}
-                y={-scenery.bridge.h / 2}
-                width={scenery.bridge.w}
-                height={scenery.bridge.h}
-                rx="3"
-                fill="url(#rm-planks)"
-                className="rm-bridge"
-                transform={`translate(${scenery.bridge.x.toFixed(1)} ${scenery.bridge.y.toFixed(1)}) rotate(${scenery.bridge.angle.toFixed(1)})`}
+                x={village.plaza.left}
+                y={village.plaza.top}
+                width={village.plaza.right - village.plaza.left}
+                height={village.plaza.bottom - village.plaza.top}
+                rx={village.radius}
+                className="mf-sand"
               />
-            )}
-            <Road id="rm-road-body" offset={0} roadW={roadW} />
-            {slots.map(slot => (
-              <rect key={slot.key} x={slot.x - roadW * 0.21} y={slot.y} width={roadW * 0.42} height="3" rx="1" className="rm-slot" />
+              {village.fence && <path d={village.fence} className="mf-fence-shadow" transform="translate(2 3)" />}
+              {village.fence && <path d={village.fence} className="mf-fence" />}
+            </>
+          )}
+          {scenery.river && <path d={scenery.river.d} className="rm-river-bank" strokeWidth={scenery.river.width + 10} />}
+          {scenery.river && <path d={scenery.river.d} className="rm-river" strokeWidth={scenery.river.width} />}
+
+          {/* Road. The last stretch is cut in slices that fade one after the other. */}
+          <g fill="none" strokeLinejoin="round">
+            <g data-tail-shadow>
+              <RoadShadow id="rm-road-tail" roadW={roadW} />
+            </g>
+            <RoadShadow id="rm-road-body" roadW={roadW} />
+            {slices.map((slice, index) => (
+              <g key={index} data-slice>
+                <Road id={`rm-slice-${index}`} offset={sliceStart(slice)} roadW={roadW} />
+                {index === finishSlice && (
+                  <>
+                    <rect x={finish.x - (roadW + 10) / 2} y={finish.y - 7} width={roadW + 10} height="14" fill="url(#rm-check)" />
+                    <g ref={flagsRef} className="rm-flags">
+                      {[-1, 1].map(side => (
+                        <g key={side} transform={`translate(${(finish.x + side * (roadW / 2 + 12)).toFixed(1)} ${(finish.y + 4).toFixed(1)})`}>
+                          <g className="rm-flag" style={{ ['--dir' as string]: side }}>
+                            <path d="M0 0V-28" className="rm-flag__pole" />
+                            <path d="M0 -28h15v10h-15z" fill="url(#rm-check)" />
+                          </g>
+                        </g>
+                      ))}
+                    </g>
+                  </>
+                )}
+              </g>
             ))}
-            <rect x={startLine.x - roadW / 2} y={startLine.y} width={roadW} height="8" fill="url(#rm-check)" />
-            <Pieces scenery={scenery} tail={false} />
-            <rect x="0" y="0" width={W} height={breakY + BAND} fill="url(#rm-tint-body)" />
           </g>
+
+          {/* Scenery of the last stretch and the first stars: fade with its ground. */}
+          <g data-tail="scenery">
+            <Pieces scenery={scenery} tail />
+            {scenery.stars.map((star, index) => (
+              <path key={index} d={star.d} fill="#fff" opacity={star.o} />
+            ))}
+          </g>
+
+          <g fill="none" strokeLinejoin="round">
+            <Road id="rm-road-body" offset={0} roadW={roadW} />
+          </g>
+          {bridge && (
+            // Wooden deck over the stream: planks across the road, a rail on each side, no kerbs.
+            <g transform={`translate(${bridge.x.toFixed(1)} ${bridge.y.toFixed(1)}) rotate(${bridge.angle.toFixed(1)})`}>
+              <rect x={-bridge.w / 2 + 3} y={-bridge.len / 2 + 5} width={bridge.w} height={bridge.len} rx="3" className="mf-shadow" />
+              <rect x={-bridge.w / 2} y={-bridge.len / 2} width={bridge.w} height={bridge.len} rx="3" fill="url(#rm-planks)" />
+              <path
+                d={`M${(-bridge.w / 2 + 2).toFixed(1)} ${(-bridge.len / 2 - 5).toFixed(1)}v${(bridge.len + 10).toFixed(1)}M${(bridge.w / 2 - 2).toFixed(1)} ${(-bridge.len / 2 - 5).toFixed(1)}v${(bridge.len + 10).toFixed(1)}`}
+                className="rm-rail"
+              />
+            </g>
+          )}
+          {slots.map(slot => (
+            <rect key={slot.key} x={slot.x - roadW * 0.21} y={slot.y} width={roadW * 0.42} height="3" rx="1" className="rm-slot" />
+          ))}
+          <rect x={startLine.x - roadW / 2} y={startLine.y} width={roadW} height="8" fill="url(#rm-check)" />
+          <Pieces scenery={scenery} tail={false} />
+
+          {/* Hour of the day: gold at the top, dusk towards the finish. */}
+          <rect x="0" y="0" width={W} height={bandEnd} fill="url(#rm-tint-body)" />
+          <rect data-tail="tint" x="0" y={breakY} width={W} height={H - breakY} fill="url(#rm-tint-tail)" />
         </svg>
       </div>
 
@@ -521,15 +697,8 @@ export default function RaceMap() {
           focusable="false"
         >
           {chunks.map((chunk, index) => (
-            <g key={index} data-chunk transform={`translate(${chunk.x.toFixed(1)} ${chunk.y.toFixed(1)})`}>
-              <rect
-                x={-chunk.size / 2}
-                y={-chunk.size / 2}
-                width={chunk.size}
-                height={chunk.size}
-                rx="1"
-                className={`fx-chunk fx-chunk--${chunk.kind}`}
-              />
+            <g key={index} data-chunk transform={`translate(${chunk.x.toFixed(1)} ${chunk.y.toFixed(1)}) rotate(${chunk.turn.toFixed(1)})`}>
+              <path d={chunk.d} fill={tinted(CHUNK_RGB[chunk.kind], chunk.y / H, nightAt)} opacity="0" />
               <circle r="1.3" className={chunk.cool ? 'fx-star fx-star--cool' : 'fx-star'} />
             </g>
           ))}

@@ -13,6 +13,8 @@ export interface BlockRect {
   right: number;
   bottom: number;
   side: TrackSide;
+  /** A cream card (covers the map). The hero is not one: it sits straight on the map. */
+  opaque?: boolean;
 }
 
 export interface TrackInput {
@@ -61,11 +63,16 @@ export interface Track {
 export const CAR_SPACING = 58;
 /** px of road after the finish line. */
 export const ROAD_TAIL = 260;
-const STEP = 4;
+/** The road enters the page from above its top edge. */
+export const ROAD_LEAD_IN = 60;
+/** px between two samples of the centre line. */
+export const TRACK_STEP = 4;
+const STEP = TRACK_STEP;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-export const roadWidthFor = (width: number) => (width >= 1100 ? 54 : width >= 768 ? 44 : 30);
+/** 54 px needs a 72 px side margin beside the full-width block; below 1250 px the road is 44. */
+export const roadWidthFor = (width: number) => (width >= 1250 ? 54 : width >= 768 ? 44 : 30);
 
 interface Lane {
   x: number;
@@ -74,12 +81,23 @@ interface Lane {
   room: number;
 }
 
-function buildWaypoints(input: TrackInput, roadW: number, gridLen: number, endY: number): { x: number; y: number }[] {
+interface Waypoint {
+  x: number;
+  y: number;
+  /** Control factors of the curve that arrives here (leaving / arriving); default: one k for both. */
+  k?: [number, number];
+}
+
+function buildWaypoints(input: TrackInput, roadW: number, gridLen: number, endY: number): Waypoint[] {
   const { width: W, blocks, contentLeft, contentRight, startY, finishY } = input;
-  const edge = roadW / 2 + (W >= 768 ? 10 : 2);
+  // Half road + 5 px kerb + a little air, so the kerb is never cut by the screen edge.
+  const edge = roadW / 2 + (W >= 768 ? 10 : 7);
   const clear = 28 + roadW / 2;
   const contentW = Math.max(1, contentRight - contentLeft);
-  const points: { x: number; y: number }[] = [];
+  const points: Waypoint[] = [];
+  let lastReach = 0;
+  let lastRoom = 0;
+  let lastLaneX = 0;
   let currentX = W - edge;
   let previousFull = false;
 
@@ -121,42 +139,143 @@ function buildWaypoints(input: TrackInput, roadW: number, gridLen: number, endY:
     if (index === 0) {
       // Starting grid: a straight stretch where the cars line up.
       const gridX = chosen.x + chosen.amp * 0.5;
-      push(gridX, startY);
+      // The road comes in from above the top edge of the page.
+      push(gridX, -ROAD_LEAD_IN);
       push(gridX, startY + gridLen);
       top = startY + gridLen;
     }
     const bottom = Math.max(block.bottom - reach, top + 24);
+    if (index === blocks.length - 1) {
+      lastReach = block.bottom - bottom;
+      lastRoom = chosen.room;
+      lastLaneX = chosen.x;
+    }
     const height = bottom - top;
     const bends = chosen.amp > 6 ? (height > 760 ? 2 : height > 340 ? 1 : 0) : 0;
     const offsets = bends === 2 ? [0.5, -1, 1, -0.5] : bends === 1 ? [0.5, -1, 0.5] : [0, 0];
     offsets.forEach((offset, step) => {
       if (index === 0 && step === 0) return;
-      push(chosen.x + chosen.amp * offset, top + (height * step) / (offsets.length - 1));
+      let x = chosen.x + chosen.amp * offset;
+      // Leaving the last block: on the side of the lane nearest to the finish straight (page
+      // centre), so the last curve has less ground to cover.
+      if (index === blocks.length - 1 && step === offsets.length - 1) x = clamp(W / 2, chosen.x - chosen.room, chosen.x + chosen.room);
+      push(x, top + (height * step) / (offsets.length - 1));
     });
     currentX = points[points.length - 1]?.x ?? currentX;
   });
 
-  // Finish straight, centred.
+  // Finish straight, centred. The last curve has little height (the finish line is close to
+  // the last block) and has to turn in under that block's corner: try where it starts (beside
+  // the block or lower) and how long it holds each end, and keep the widest curve that stays
+  // clear of the block.
   const last = points[points.length - 1];
-  const straightTop = Math.max(finishY - 20, (last?.y ?? startY) + 40);
-  push(W / 2, straightTop);
+  const straightTop = Math.max(finishY - 10, (last?.y ?? startY) + 40);
+  const block = blocks[blocks.length - 1];
+  if (last && block && Math.abs(W / 2 - last.x) > 1) {
+    const before = points[points.length - 2];
+    const pad = roadW / 2 + 5 + 2;
+    const toCentre = Math.sign(W / 2 - last.x);
+    let widest = -1;
+    let keptX = last.x;
+    let keptY = last.y;
+    let keptK: [number, number] | undefined;
+    for (const back of [0, 40, 80, 120, 160]) {
+      // Start further from the centre (when the lane has the room): more ground to cover, but
+      // more of the turn can happen beside the block.
+      const x0 = last.x - toCentre * back;
+      if (back > 0 && (lastRoom <= 0 || Math.abs(x0 - lastLaneX) > lastRoom)) break;
+      const dx = W / 2 - x0;
+      for (const lift of [1, 0.75, 0.5, 0.25, 0, -0.25]) {
+        const y0 = block.bottom - lastReach * lift;
+        if (lift !== 1 && (!before || y0 < before.y + 60 || y0 > straightTop - 60)) continue;
+        const dy = straightTop - y0;
+        for (let k1 = 0.15; k1 <= 0.96; k1 += 0.05) {
+          for (let k2 = 0.15; k2 <= 0.96; k2 += 0.05) {
+            const radius = minRadius(
+              dx,
+              dy,
+              k1,
+              k2,
+              (x, y) => x0 + x > block.left - pad && x0 + x < block.right + pad && y0 + y > block.top - pad && y0 + y < block.bottom + pad,
+              120
+            );
+            if (radius > widest) {
+              widest = radius;
+              keptX = x0;
+              keptY = y0;
+              keptK = [k1, k2];
+            }
+          }
+        }
+      }
+    }
+    last.x = keptX;
+    last.y = keptY;
+    push(W / 2, straightTop);
+    if (keptK) points[points.length - 1].k = keptK;
+  } else {
+    push(W / 2, straightTop);
+  }
   push(W / 2, Math.max(endY, straightTop + 40));
   return points;
 }
 
 /**
  * Cubic Bézier between two waypoints with vertical end tangents: control points at
- * (x0, y0 + k·dy) and (x1, y1 − k·dy). y stays monotonic for k ≤ 1, and the radius where the
- * curve leaves a waypoint is 1.5·(k·dy)² / |dx|, so wide crossings use the largest k.
+ * (x0, y0 + k1·dy) and (x1, y1 − k2·dy). The tightest spot can be inside the curve, so the
+ * minimum radius is measured along it. Returns -1 when y would go back up, or when `blocked`
+ * says a point of the curve (relative to its start) is not allowed.
  */
-function controlFactor(dx: number, dy: number): number {
-  return clamp(0.3 + (0.7 * Math.abs(dx)) / Math.max(1, dy), 0.3, 0.97);
+function minRadius(dx: number, dy: number, k1: number, k2: number, blocked?: (x: number, y: number) => boolean, samples = 48): number {
+  let min = Infinity;
+  const p1 = k1 * dy;
+  const p2 = dy - k2 * dy;
+  for (let i = 0; i <= samples; i += 1) {
+    const t = i / samples;
+    const u = 1 - t;
+    const x1 = dx * 6 * t * u;
+    const x2 = dx * (6 - 12 * t);
+    const y1 = 3 * (u * u * p1 + 2 * t * u * (p2 - p1) + t * t * (dy - p2));
+    const y2 = 6 * (u * (p2 - 2 * p1) + t * (dy - 2 * p2 + p1));
+    if (y1 < -1e-6) return -1;
+    if (blocked?.(dx * (3 * t * t - 2 * t * t * t), 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * dy)) return -1;
+    const cross = Math.abs(x1 * y2 - y1 * x2);
+    if (cross < 1e-6) continue;
+    const radius = Math.pow(x1 * x1 + y1 * y1, 1.5) / cross;
+    if (radius < min) min = radius;
+  }
+  return min;
+}
+/**
+ * The k closest to the usual one (wider crossings use a larger k) that keeps the curve at or
+ * above the target radius; when no k reaches it, the k with the widest curve.
+ */
+function controlFactor(dx: number, dy: number, target: number): number {
+  const usual = clamp(0.3 + (0.7 * Math.abs(dx)) / Math.max(1, dy), 0.3, 0.97);
+  let chosen = usual;
+  let chosenGap = Infinity;
+  let widest = usual;
+  let widestRadius = -1;
+  for (let k = 0.3; k <= 0.971; k += 0.02) {
+    const radius = minRadius(dx, dy, k, k);
+    if (radius > widestRadius) {
+      widestRadius = radius;
+      widest = k;
+    }
+    if (radius >= target && Math.abs(k - usual) < chosenGap) {
+      chosenGap = Math.abs(k - usual);
+      chosen = k;
+    }
+  }
+  return chosenGap < Infinity ? chosen : widest;
 }
 
 export function buildTrack(input: TrackInput): Track {
   const roadW = roadWidthFor(input.width);
-  const gridLead = Math.max(0, input.cars - 1) * CAR_SPACING + 30;
-  const gridLen = gridLead + 44;
+  const gridSpan = Math.max(0, input.cars - 1) * CAR_SPACING + 30;
+  const gridLead = input.startY + ROAD_LEAD_IN + gridSpan;
+  const gridLen = gridSpan + 44;
+  const targetRadius = roadW >= 44 ? 92 : 48;
   const endY = input.finishY + ROAD_TAIL;
   const waypoints = buildWaypoints(input, roadW, gridLen, endY);
 
@@ -171,9 +290,9 @@ export function buildTrack(input: TrackInput): Track {
       dense.push(b.x, b.y);
       continue;
     }
-    const k = controlFactor(dx, dy);
-    const c1y = a.y + dy * k;
-    const c2y = b.y - dy * k;
+    const single = b.k ? 0 : controlFactor(dx, dy, targetRadius);
+    const c1y = a.y + dy * (b.k ? b.k[0] : single);
+    const c2y = b.y - dy * (b.k ? b.k[1] : single);
     const steps = Math.max(8, Math.ceil((Math.abs(dx) + Math.abs(dy)) / 2));
     for (let s = 1; s <= steps; s += 1) {
       const t = s / steps;

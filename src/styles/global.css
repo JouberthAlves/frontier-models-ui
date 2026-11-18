@@ -186,8 +186,15 @@ a {
 
 /* ---------- racing zone (hero + Racing): everything sits on the pastel map ---------- */
 .race-scope {
-  --race-gap: clamp(180px, 17vw, 240px);
-  --finish-gap: 200px;
+  --race-gap: clamp(200px, 17vw, 240px);
+  --finish-gap: 140px;
+}
+
+@media (min-width: 1100px) and (max-width: 1299px) {
+  /* The road runs down the side margin beside the full-width stage: leave it 72 px. */
+  .race-scope {
+    --gutter: 72px;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1099px) {
@@ -201,7 +208,7 @@ a {
 @media (max-width: 767px) {
   .race-scope {
     --race-gap: 120px;
-    --finish-gap: 150px;
+    --finish-gap: 130px;
   }
 }
 

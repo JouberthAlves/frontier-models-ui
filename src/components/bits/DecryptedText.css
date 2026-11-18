@@ -1,6 +1,6 @@
 /*
  * Adapted from React Bits: https://github.com/DavidHDev/react-bits/blob/main/src/ts-default/TextAnimations/DecryptedText/DecryptedText.tsx
- * Changes for Frontier Models UI: cell styles moved from inline styles to CSS.
+ * Changes for Frontier Models UI: cell styles moved from inline styles to CSS; kerning off so the width is the same at rest and while scrambling.
  *
  * MIT + Commons Clause License Condition v1.0
  *
@@ -30,6 +30,9 @@
 .decrypted-text {
   display: inline;
   white-space: normal;
+  /* Same advance widths at rest and while scrambling (the cells cannot kern or ligate). */
+  font-kerning: none;
+  font-variant-ligatures: none;
 }
 
 .decrypted-text__word {

@@ -1,5 +1,5 @@
 import DecryptedText from './bits/DecryptedText';
-import { useState } from 'react';
+import { useState, type FocusEvent } from 'react';
 import SectionTitle from './SectionTitle';
 import ExternalLink from './ExternalLink';
 import { useI18n } from '../i18n/i18n';
@@ -7,6 +7,7 @@ import type { Dict } from '../i18n/pt';
 import { archive, archiveOrder, commitUrl, type Benchmark, type Category, type Run } from '../data/archive';
 import { colorOf } from '../data/models';
 import { promptLabel } from '../data/prompts';
+import { isKeyboardFocus } from '../lib/motion';
 import { useReveal } from '../lib/reveal';
 import './Archive.css';
 
@@ -51,6 +52,11 @@ export default function Archive() {
   const { t } = useI18n();
   const [category, setCategory] = useState<Category | 'all'>('all');
   const [bench, setBench] = useState<Benchmark | 'all'>('all');
+  // Keyboard focus on a link of a row plays the "decrypt" of its name (the mouse plays it on hover).
+  const [nameKeys, setNameKeys] = useState<Record<string, number>>({});
+  const playName = (key: string) => (event: FocusEvent<HTMLElement>) => {
+    if (isKeyboardFocus(event.target)) setNameKeys(keys => ({ ...keys, [key]: (keys[key] ?? 0) + 1 }));
+  };
   const tableReveal = useReveal<HTMLDivElement>();
   const listReveal = useReveal<HTMLUListElement>();
 
@@ -112,13 +118,13 @@ export default function Archive() {
             </thead>
             <tbody>
               {rows.map((run, index) => (
-                <tr key={run.key} className="reveal-item" style={{ ['--i' as string]: Math.min(index, 12) }}>
+                <tr key={run.key} className="reveal-item" style={{ ['--i' as string]: Math.min(index, 12) }} onFocus={playName(run.key)}>
                   <th scope="row">
                     <span className="archive__model" style={{ ['--dot' as string]: colorOf(run) }}>
                       <span className="dot" aria-hidden="true" />
                       <span className="wrap-any">
-                        <DecryptedText text={run.model} animateOn="hover" tone={colorOf(run)} />
-                      </span>
+                  <DecryptedText text={run.model} animateOn="hover" playKey={nameKeys[run.key] ?? 0} tone={colorOf(run)} />
+                </span>
                     </span>
                   </th>
                   <td>{BENCH_NAME[run.benchmark]}</td>
@@ -142,11 +148,11 @@ export default function Archive() {
         {/* < 768px: cards */}
         <ul ref={listReveal} className="archive__cards">
           {rows.map((run, index) => (
-            <li key={run.key} className="archive-card reveal-item" style={{ ['--i' as string]: Math.min(index, 8) }}>
+            <li key={run.key} className="archive-card reveal-item" style={{ ['--i' as string]: Math.min(index, 8) }} onFocus={playName(run.key)}>
               <p className="archive__model archive-card__name" style={{ ['--dot' as string]: colorOf(run) }}>
                 <span className="dot" aria-hidden="true" />
                 <span className="wrap-any">
-                        <DecryptedText text={run.model} animateOn="hover" tone={colorOf(run)} />
+                        <DecryptedText text={run.model} animateOn="hover" playKey={nameKeys[run.key] ?? 0} tone={colorOf(run)} />
                       </span>
               </p>
               <dl className="archive-card__facts">

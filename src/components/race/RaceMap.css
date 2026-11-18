@@ -57,6 +57,12 @@
 .mf-sand {
   fill: var(--map-sand);
 }
+.mf-sand-2 {
+  fill: var(--map-sand-2);
+}
+.mf-shallow {
+  fill: color-mix(in oklab, var(--map-sea) 58%, var(--map-foam));
+}
 .mf-sea {
   fill: var(--map-sea);
 }
@@ -78,6 +84,10 @@
 .mf-tree-2 {
   fill: var(--map-tree-2);
 }
+/* Deep green of the woods (dense trees, pines). */
+.mf-tree-deep {
+  fill: color-mix(in oklab, var(--map-tree-2) 70%, #2c5a52);
+}
 .mf-trunk {
   fill: var(--map-trunk);
 }
@@ -97,17 +107,18 @@
   stroke-width: 1.6;
   opacity: 0.7;
 }
-.mf-fence {
-  fill: none;
-  stroke: var(--map-wood);
-  stroke-width: 3.5;
-  stroke-dasharray: 7 4;
-}
+.mf-fence,
 .mf-fence-shadow {
   fill: none;
-  stroke: var(--map-shadow);
   stroke-width: 3.5;
-  stroke-dasharray: 7 4;
+  stroke-dasharray: 9 5;
+  stroke-linejoin: round;
+}
+.mf-fence {
+  stroke: var(--map-wood);
+}
+.mf-fence-shadow {
+  stroke: var(--map-shadow);
 }
 .mf-wake {
   fill: none;
@@ -132,18 +143,30 @@
   stroke-linejoin: round;
   opacity: 0.92;
 }
-.rm-cliff,
-.rm-cliff-shadow {
+.rm-foam--inner {
+  stroke-width: 3;
+  stroke-dasharray: 30 18;
+  opacity: 0.6;
+}
+.rm-wet-sand {
   fill: none;
-  stroke-width: 15;
+  stroke: var(--map-sand-2);
+  stroke-width: 18;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.rm-cliff {
-  stroke: var(--map-sand-2);
+.rm-cliff-lip {
+  fill: none;
+  stroke: var(--map-wall);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.6;
 }
-.rm-cliff-shadow {
-  stroke: var(--map-shadow);
+.rm-street {
+  fill: none;
+  stroke: var(--map-sand);
+  stroke-linecap: round;
 }
 .rm-river,
 .rm-river-bank {
@@ -157,21 +180,24 @@
 .rm-river-bank {
   stroke: var(--map-sand-2);
 }
-.rm-bridge {
+.rm-rail {
+  fill: none;
   stroke: var(--map-trunk);
-  stroke-width: 2;
+  stroke-width: 4;
+  stroke-linecap: round;
 }
 .rm-plank-line {
   fill: none;
   stroke: var(--map-trunk);
-  stroke-width: 1;
-  opacity: 0.6;
+  stroke-width: 1.2;
+  opacity: 0.7;
 }
 
 /* ---------- road ---------- */
+/* Two stacked strokes: 12% under the road, 6% in the soft edge around it. */
 .rm-road-shadow {
   stroke: #000;
-  opacity: 0.12;
+  opacity: 0.06;
 }
 .rm-kerb-red {
   stroke: var(--map-kerb-red);
@@ -221,21 +247,6 @@
 }
 
 /* ---------- pieces that break off ---------- */
-.fx-chunk--asphalt {
-  fill: var(--map-asphalt);
-}
-.fx-chunk--kerb-red {
-  fill: var(--map-kerb-red);
-}
-.fx-chunk--kerb-white {
-  fill: var(--map-kerb-white);
-}
-.fx-chunk--leaf {
-  fill: var(--map-tree);
-}
-.fx-chunk--roof {
-  fill: var(--map-roof);
-}
 .fx-star {
   fill: #fff;
   opacity: 0;
