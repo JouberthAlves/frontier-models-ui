@@ -1,0 +1,307 @@
+<title>Frontier Models UI · Opções de corrida</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..150,600..900&family=Atkinson+Hyperlegible+Next:wght@400;600&family=Red+Hat+Mono:wght@500&display=swap">
+<style>
+/* Layout: quatro grupos (fundo, transição, loading, hover); cada opção é um card com um protótipo vivo e um botão de repetir. Single dark look, matches the site. */
+:root{
+  color-scheme:dark;
+  --bg:#080f1d; --card:#0e2034; --line:#25415d; --ink:#f1f6fd; --ink2:#b7cbe1; --ink3:#8fa5bf;
+  --warm:#fdaf6d; --warm2:#ffb76b; --cyan:#85e4eb; --cool:#83caff; --track:#302337; --sky:#17283b;
+  --red:#e8423a; --asphalt:#16171c;
+  --f-d:"Anybody","Arial Narrow",sans-serif; --f-b:"Atkinson Hyperlegible Next",system-ui,sans-serif; --f-m:"Red Hat Mono",ui-monospace,monospace;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-b);font-size:16px;line-height:1.55;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:44px}
+h1{font-family:var(--f-d);font-weight:900;font-stretch:125%;font-variation-settings:"wdth" 125;font-size:clamp(28px,4vw,48px);line-height:1;margin:0 0 10px}
+h2{font-family:var(--f-d);font-weight:850;font-stretch:112%;font-variation-settings:"wdth" 112;font-size:clamp(22px,2.6vw,30px);margin:0}
+.intro{max-width:760px;color:var(--ink2);margin:0}
+.group{display:grid;gap:14px}
+.group>p{margin:0;color:var(--ink2);max-width:760px}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.opts.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1000px){.opts,.opts.four{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media (max-width:640px){.opts,.opts.four{grid-template-columns:minmax(0,1fr)}}
+.opt{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:grid;min-width:0}
+.stage{position:relative;height:230px;overflow:hidden;background:#05080f}
+.meta{padding:14px 16px 16px;display:grid;gap:6px}
+.meta h3{margin:0;font-size:18px;line-height:1.25}
+.meta h3 b{color:var(--warm);font-weight:700;margin-right:6px}
+.meta p{margin:0;color:var(--ink2);font-size:14.5px}
+.replay{justify-self:start;margin-top:4px;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);font:600 14px var(--f-b);cursor:pointer}
+.replay:hover{border-color:var(--cyan)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.tag{position:absolute;left:10px;top:10px;font:500 11px var(--f-m);color:var(--ink2);background:rgba(8,15,29,.7);padding:2px 6px;border-radius:4px;z-index:5}
+
+/* ---------- A1 asfalto visto de cima ---------- */
+.a1{background:
+  radial-gradient(circle at 30% 40%,rgba(255,255,255,.025),transparent 40%),
+  repeating-linear-gradient(90deg,#17181d 0 3px,#15161b 3px 7px),var(--asphalt)}
+.a1 .curb{position:absolute;top:-60px;bottom:-60px;width:16px;background:repeating-linear-gradient(180deg,var(--red) 0 30px,#f4f1ea 30px 60px);animation:curb 0.9s linear infinite}
+.a1 .curb.l{left:7%}.a1 .curb.r{right:7%}
+.a1 .lane{position:absolute;left:50%;top:-80px;bottom:-80px;width:6px;margin-left:-3px;background:repeating-linear-gradient(180deg,rgba(241,246,253,.75) 0 44px,transparent 44px 88px);animation:lane 0.6s linear infinite}
+.a1 .skid{position:absolute;width:3px;height:140px;border-radius:2px;background:linear-gradient(transparent,rgba(0,0,0,.55),transparent);top:30px}
+.a1 .grain{position:absolute;inset:0;opacity:.35;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .5 0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+.a1 .label{position:absolute;right:12%;bottom:18px;font:900 28px var(--f-d);font-stretch:150%;font-variation-settings:"wdth" 150;color:rgba(241,246,253,.12);letter-spacing:.02em;transform:rotate(-90deg) translateX(40%);transform-origin:right bottom}
+@keyframes curb{to{transform:translateY(60px)}}
+@keyframes lane{to{transform:translateY(88px)}}
+
+/* ---------- A2 pit wall / setores ---------- */
+.a2{background:linear-gradient(180deg,#0b0f17,#0a0d14)}
+.a2 .row{position:absolute;left:5%;right:5%;height:22px;display:grid;grid-template-columns:44px 1fr 1fr 1fr 60px;gap:6px;align-items:center;font:500 11px var(--f-m);color:var(--ink3)}
+.a2 .row span.s{height:6px;border-radius:2px;background:#1f2633;position:relative;overflow:hidden}
+.a2 .row span.s i{position:absolute;inset:0;transform:scaleX(0);transform-origin:left;animation:sector 3.6s var(--d,0s) infinite}
+.a2 .flag{position:absolute;right:-30px;top:-30px;width:180px;height:180px;opacity:.10;transform:rotate(18deg);
+  background:conic-gradient(#fff 25%,transparent 0 50%,#fff 0 75%,transparent 0) 0 0/36px 36px}
+.a2 .lights{position:absolute;left:5%;bottom:16px;display:flex;gap:8px}
+.a2 .lights i{width:14px;height:14px;border-radius:50%;background:#2a1414;box-shadow:inset 0 0 0 2px #3a1d1d}
+@keyframes sector{0%{transform:scaleX(0)}40%,85%{transform:scaleX(1)}100%{transform:scaleX(1);opacity:0}}
+
+/* ---------- A3 câmera onboard (estrada em perspectiva) ---------- */
+.a3 canvas{position:absolute;inset:0;width:100%;height:100%}
+
+/* ---------- B transições ---------- */
+.trans .race,.trans .space{position:absolute;inset:0}
+.trans .race{background:repeating-linear-gradient(90deg,#17181d 0 3px,#15161b 3px 7px),var(--asphalt)}
+.trans .race::before,.trans .race::after{content:"";position:absolute;top:0;bottom:0;width:12px;background:repeating-linear-gradient(180deg,var(--red) 0 24px,#f4f1ea 24px 48px)}
+.trans .race::before{left:10%}.trans .race::after{right:10%}
+.trans .space{background:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 60%,#cfe8ff,transparent),radial-gradient(1.5px 1.5px at 40% 80%,#fff,transparent),radial-gradient(1px 1px at 85% 20%,#fff,transparent),radial-gradient(1px 1px at 55% 45%,#85e4eb,transparent),radial-gradient(1px 1px at 12% 70%,#fff,transparent),linear-gradient(160deg,#0c1a2c,#080f1d)}
+.trans .space .orbit{position:absolute;left:50%;top:50%;width:200px;height:84px;margin:-42px 0 0 -100px;border:1px solid #3e617f;border-radius:50%}
+.trans .space .orbit.o2{width:280px;height:118px;margin:-59px 0 0 -140px}
+.trans .space .sun{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px;border-radius:50%;background:radial-gradient(circle,#fff5ed,#ffb76b 60%,transparent 70%)}
+/* B1 warp */
+.b1 .warp{position:absolute;inset:0;opacity:0}
+.b1.play .race{animation:fadeOut 1.4s .5s ease forwards}
+.b1.play .warp{animation:warpIn 1.6s .3s ease forwards}
+.b1 .space{opacity:0}.b1.play .space{animation:fadeIn .9s 1.5s ease forwards}
+.b1 .warp i{position:absolute;left:50%;top:50%;height:2px;width:30px;border-radius:2px;background:linear-gradient(90deg,transparent,#cfe8ff);transform-origin:left center}
+@keyframes warpIn{0%{opacity:0}30%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes fadeOut{to{opacity:0}}@keyframes fadeIn{to{opacity:1}}
+/* B2 bandeira */
+.b2 .flag{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(7,1fr)}
+.b2 .flag i{background:#f1f6fd;transition:transform .5s ease,opacity .5s ease, border-radius .5s ease}
+.b2 .flag i:nth-child(odd){background:#0b0d12}
+.b2 .space{opacity:0;transition:opacity .6s ease .9s}
+.b2.play .space{opacity:1}
+.b2.play .flag i{transform:scale(.06);opacity:.9;border-radius:50%}
+.b2.play .flag i:nth-child(odd){opacity:0}
+.b2 .race{transition:opacity .4s}
+.b2.play .race{opacity:0}
+/* B3 costura */
+.b3 .space{clip-path:polygon(130% 0,140% 0,140% 100%,110% 100%)}
+.b3 .seam{position:absolute;top:-10%;height:120%;width:3px;left:105%;background:linear-gradient(180deg,#ffb76b,#80e9f2);transform:rotate(14deg);box-shadow:0 0 18px rgba(133,228,235,.6)}
+.b3.play .space{animation:wipe 1.3s .2s cubic-bezier(.65,0,.35,1) forwards}
+.b3.play .seam{animation:seam 1.3s .2s cubic-bezier(.65,0,.35,1) forwards}
+@keyframes wipe{from{clip-path:polygon(130% 0,140% 0,140% 100%,110% 100%)}to{clip-path:polygon(-20% 0,140% 0,140% 100%,-40% 100%)}}
+@keyframes seam{from{left:105%}to{left:-25%}}
+
+/* ---------- C loading ---------- */
+.ld{display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 120%,#1a1220,#080f1d)}
+.ld .pct{position:absolute;bottom:14px;left:0;right:0;text-align:center;font:500 12px var(--f-m);color:var(--ink3)}
+.c1 .lights{display:flex;gap:12px;padding:12px 16px;border-radius:12px;background:#0b0c10;box-shadow:inset 0 0 0 1px #222}
+.c1 .lights span{display:grid;gap:8px}
+.c1 .lights i{width:30px;height:30px;border-radius:50%;background:#2b1515;transition:background .15s, box-shadow .15s}
+.c1 .lights i.on{background:var(--red);box-shadow:0 0 14px rgba(232,66,58,.8)}
+.c1 .go{position:absolute;font:900 44px var(--f-d);font-stretch:150%;font-variation-settings:"wdth" 150;color:var(--ink);opacity:0}
+.c1 .go.show{animation:go .9s ease forwards}
+@keyframes go{0%{opacity:0;transform:scale(.9)}20%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(1.4)}}
+.c2 svg{width:78%;max-width:300px;height:auto}
+.c2 .trk{fill:none;stroke:#2b3445;stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+.c2 .run{fill:none;stroke:var(--warm);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.c3 .tower{width:200px;display:grid;gap:5px}
+.c3 .tower div{display:grid;grid-template-columns:8px 1fr 70px;gap:8px;align-items:center;height:22px;padding:0 8px;background:#0d1522;border-radius:4px;font:600 12px var(--f-b);opacity:.25;transition:opacity .2s}
+.c3 .tower div.on{opacity:1}
+.c3 .tower b{width:8px;height:14px;border-radius:2px}
+.c3 .tower em{font:500 11px var(--f-m);font-style:normal;color:var(--ink3);text-align:right}
+
+/* ---------- D hover ---------- */
+.hv{display:grid;place-items:center;background:var(--card)}
+.hv .name{font:800 26px var(--f-d);font-stretch:100%;font-variation-settings:"wdth" 100;position:relative;cursor:pointer;padding:6px 4px;color:var(--ink)}
+.hint{position:absolute;bottom:12px;left:0;right:0;text-align:center;font:500 11px var(--f-m);color:var(--ink3)}
+/* D1 placa vira */
+.d1 .name span{display:inline-block;transition:transform .32s cubic-bezier(.23,1,.32,1), color .32s}
+.d1 .name:hover span,.d1 .name:focus-visible span{transform:rotateX(360deg);color:var(--m)}
+/* D2 faixa de velocidade */
+.d2 .name{overflow:hidden;transition:transform .28s cubic-bezier(.16,1,.3,1)}
+.d2 .name::before{content:"";position:absolute;left:-10%;right:-10%;bottom:4px;height:.42em;background:var(--m);transform:skewX(-18deg) scaleX(0);transform-origin:left;transition:transform .32s cubic-bezier(.16,1,.3,1);z-index:-1;opacity:.9}
+.d2 .name:hover,.d2 .name:focus-visible{transform:translateX(6px) skewX(-6deg)}
+.d2 .name:hover::before,.d2 .name:focus-visible::before{transform:skewX(-18deg) scaleX(1)}
+.d2 .name i{position:absolute;right:100%;top:50%;width:0;height:2px;background:var(--m);transition:width .28s cubic-bezier(.16,1,.3,1);margin-right:8px}
+.d2 .name:hover i,.d2 .name:focus-visible i{width:36px}
+/* D3 decifrar */
+.d3 .name.on{color:var(--m)}
+/* D4 separação RGB */
+.d4 .name{transition:text-shadow .18s, color .18s}
+.d4 .name:hover,.d4 .name:focus-visible{text-shadow:-3px 0 rgba(255,183,107,.9), 3px 0 rgba(128,233,242,.9);animation:jit .25s steps(2) 2}
+@keyframes jit{50%{transform:translateX(1px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Corrida até o Orbitarium</h1>
+  <p class="intro">A ideia: a página inteira é pista até a seção Orbitarium-bench; lá uma transição leva para o espaço (o fundo Galaxy só aparece a partir dali). Escolha um de cada grupo, ou diga o que misturar. As cores seguem a imagem do README; o vermelho e branco da zebra entram só no tema de corrida.</p>
+</header>
+
+<section class="group" aria-labelledby="gA">
+  <h2 id="gA">1 · Fundo de corrida (do hero até o Racing)</h2>
+  <p>Substitui o "laranja com partículas". Fica atrás de todo o conteúdo até o Orbitarium.</p>
+  <div class="opts">
+    <article class="opt">
+      <div class="stage a1" aria-hidden="true">
+        <span class="tag">A1</span><div class="grain"></div>
+        <div class="skid" style="left:32%"></div><div class="skid" style="left:36%;top:60px"></div>
+        <div class="curb l"></div><div class="curb r"></div><div class="lane"></div>
+        <div class="label">GRID</div>
+      </div>
+      <div class="meta"><h3><b>A1</b>Pista vista de cima</h3><p>Asfalto com grão, zebras vermelho e branco nas duas bordas da tela e a faixa central. Ao rolar a página, a pista corre embaixo de você, como se o site fosse o circuito. Marcas de pneu nas curvas entre seções.</p></div>
+    </article>
+    <article class="opt">
+      <div class="stage a2" aria-hidden="true" id="a2">
+        <span class="tag">A2</span><div class="flag"></div>
+        <div class="lights"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="meta"><h3><b>A2</b>Muro dos boxes</h3><p>Fundo escuro de telemetria: linhas de setor que acendem em roxo, verde e amarelo (as cores de volta da F1), bandeira quadriculada apagada no canto e as 5 luzes de largada. Mais "transmissão de TV" que pista.</p></div>
+    </article>
+    <article class="opt">
+      <div class="stage a3" aria-hidden="true"><span class="tag">A3</span><canvas id="a3"></canvas></div>
+      <div class="meta"><h3><b>A3</b>Câmera onboard</h3><p>Estrada noturna em perspectiva com zebras e rastros dos carros (no estilo do Hyperspeed do React Bits). A rolagem acelera: rolar rápido estica os rastros. É o mais "jogo" dos três e o mais pesado.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" aria-labelledby="gB">
+  <h2 id="gB">2 · Transição para o espaço (ao chegar no Orbitarium)</h2>
+  <p>Toca uma vez quando a seção Orbitarium entra na tela; voltando para cima, desfaz.</p>
+  <div class="opts">
+    <article class="opt">
+      <div class="stage trans b1" id="b1" aria-hidden="true"><span class="tag">B1</span><div class="race"></div><div class="warp" id="warp"></div><div class="space"><div class="orbit o2"></div><div class="orbit"></div><div class="sun"></div></div></div>
+      <div class="meta"><h3><b>B1</b>Salto para o hiperespaço</h3><p>Os rastros dos carros esticam até virar estrelas em velocidade de dobra; o asfalto some e o céu do planetário aparece com as órbitas.</p><button class="replay" data-play="b1">Ver de novo</button></div>
+    </article>
+    <article class="opt">
+      <div class="stage trans b2" id="b2" aria-hidden="true"><span class="tag">B2</span><div class="race"></div><div class="space"><div class="orbit o2"></div><div class="orbit"></div><div class="sun"></div></div><div class="flag" id="flag"></div></div>
+      <div class="meta"><h3><b>B2</b>Bandeirada vira estrelas</h3><p>Uma bandeira quadriculada cobre a tela (fim da corrida) e os quadrados brancos encolhem até virar estrelas do céu.</p><button class="replay" data-play="b2">Ver de novo</button></div>
+    </article>
+    <article class="opt">
+      <div class="stage trans b3" id="b3" aria-hidden="true"><span class="tag">B3</span><div class="race"></div><div class="space"><div class="orbit o2"></div><div class="orbit"></div><div class="sun"></div></div><div class="seam"></div></div>
+      <div class="meta"><h3><b>B3</b>A costura varre a tela</h3><p>A diagonal laranja→ciano do hero volta e atravessa a tela de lado a lado, trocando pista por céu. Amarra com o hero e resolve o corte seco que você apontou: a linha continua até a borda.</p><button class="replay" data-play="b3">Ver de novo</button></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" aria-labelledby="gC">
+  <h2 id="gC">3 · Loading (carrega tudo antes de abrir)</h2>
+  <p>Progresso real: fontes, o fundo WebGL compilado e as imagens da primeira tela e do palco de comparação. O resto carrega por trás. Limite de 12 s; se passar, o site abre assim mesmo.</p>
+  <div class="opts">
+    <article class="opt">
+      <div class="stage ld c1" id="c1" aria-hidden="true"><span class="tag">C1</span><div class="lights"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div><div class="go">LARGADA</div><div class="pct" id="c1p">0 / 5</div></div>
+      <div class="meta"><h3><b>C1</b>Luzes de largada</h3><p>As 5 luzes vermelhas da F1 acendem uma a uma conforme carrega. Quando tudo está pronto, as luzes apagam e o site entra (com a ignição do título).</p><button class="replay" data-play="c1">Ver de novo</button></div>
+    </article>
+    <article class="opt">
+      <div class="stage ld c2" id="c2" aria-hidden="true"><span class="tag">C2</span>
+        <svg viewBox="0 0 300 160"><path class="trk" d="M40 120 C 20 70, 60 30, 110 40 L 190 30 C 250 20, 280 70, 250 105 L 200 130 C 170 145, 120 140, 90 132 Z"/><path class="run" id="c2run" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" d="M40 120 C 20 70, 60 30, 110 40 L 190 30 C 250 20, 280 70, 250 105 L 200 130 C 170 145, 120 140, 90 132 Z"/></svg>
+        <div class="pct" id="c2p">0%</div></div>
+      <div class="meta"><h3><b>C2</b>Volta no mapa</h3><p>O traçado do circuito (o mesmo do S12) vai sendo percorrido em laranja; completar a volta é terminar de carregar.</p><button class="replay" data-play="c2">Ver de novo</button></div>
+    </article>
+    <article class="opt">
+      <div class="stage ld c3" id="c3" aria-hidden="true"><span class="tag">C3</span><div class="tower" id="tower"></div></div>
+      <div class="meta"><h3><b>C3</b>Torre de cronometragem</h3><p>Os 6 modelos entram no grid um por um, cada um com sua cor, como a torre de tempos da transmissão. Sem posição nem tempo: só "no grid".</p><button class="replay" data-play="c3">Ver de novo</button></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" aria-labelledby="gD">
+  <h2 id="gD">4 · Hover nos nomes dos modelos</h2>
+  <p>Troca o rastro borrado de hoje. Passe o mouse (ou toque) no nome.</p>
+  <div class="opts four">
+    <article class="opt"><div class="stage hv d1"><span class="tag">D1</span><span class="name" tabindex="0" style="--m:#aaa7ff" data-split>GPT-6 Astra</span><span class="hint">passe o mouse</span></div>
+      <div class="meta"><h3><b>D1</b>Placa que vira</h3><p>Cada letra gira como a placa de box e volta na cor do modelo.</p></div></article>
+    <article class="opt"><div class="stage hv d2"><span class="tag">D2</span><span class="name" tabindex="0" style="--m:#ff99cc"><i></i>Opus 5.5</span><span class="hint">passe o mouse</span></div>
+      <div class="meta"><h3><b>D2</b>Faixa de velocidade</h3><p>Uma faixa inclinada na cor do modelo passa por baixo do nome, que inclina e avança como carro saindo do box.</p></div></article>
+    <article class="opt"><div class="stage hv d3"><span class="tag">D3</span><span class="name" tabindex="0" style="--m:#facc6b" id="d3">GPT-6.1 Sol</span><span class="hint">passe o mouse</span></div>
+      <div class="meta"><h3><b>D3</b>Decifrar</h3><p>As letras embaralham e resolvem na cor do modelo, como o computador de bordo lendo o nome.</p></div></article>
+    <article class="opt"><div class="stage hv d4"><span class="tag">D4</span><span class="name" tabindex="0">Gemini 4 Argon</span><span class="hint">passe o mouse</span></div>
+      <div class="meta"><h3><b>D4</b>Separação laranja/ciano</h3><p>O nome se divide nas duas cores da costura (pista e céu) e treme duas vezes.</p></div></article>
+  </div>
+</section>
+</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// A2 sector rows
+(() => {
+  const a2 = document.getElementById('a2');
+  const cols = ['#b36bff', '#4ade80', '#facc15'];
+  for (let r = 0; r < 6; r++) {
+    const row = document.createElement('div'); row.className = 'row'; row.style.top = (22 + r * 28) + 'px';
+    row.innerHTML = '<span>S' + (r + 1) + '</span>' + [0,1,2].map(i => '<span class="s"><i style="background:' + cols[(r + i) % 3] + ';--d:' + (r * .25 + i * .6) + 's"></i></span>').join('') + '<span style="text-align:right">●</span>';
+    a2.appendChild(row);
+  }
+  const lights = a2.querySelectorAll('.lights i'); let k = 0;
+  if (!reduce) setInterval(() => { lights.forEach((l, i) => l.style.background = i < k ? '#e8423a' : '#2a1414'); k = (k + 1) % 7; }, 500);
+})();
+// A3 onboard road
+(() => {
+  const c = document.getElementById('a3'); const x = c.getContext('2d'); let w, h, t = 0;
+  const cars = Array.from({ length: 26 }, () => ({ z: Math.random(), lane: (Math.random() * 4 | 0), warm: Math.random() < .6 }));
+  function size() { w = c.width = c.clientWidth; h = c.height = c.clientHeight; }
+  size(); addEventListener('resize', size);
+  function frame() {
+    t += 0.012;
+    x.fillStyle = '#05070c'; x.fillRect(0, 0, w, h);
+    const hy = h * 0.38, cx = w / 2;
+    // sky glow
+    const g = x.createLinearGradient(0, 0, 0, hy); g.addColorStop(0, '#0a0f1a'); g.addColorStop(1, '#2a1a24'); x.fillStyle = g; x.fillRect(0, 0, w, hy);
+    // road
+    x.fillStyle = '#121318'; x.beginPath(); x.moveTo(cx - 12, hy); x.lineTo(cx + 12, hy); x.lineTo(w * 1.1, h); x.lineTo(-w * .1, h); x.fill();
+    // curbs
+    for (let i = 0; i < 18; i++) {
+      const z0 = ((i / 18) + t) % 1, z1 = z0 + 1 / 36; const p = z => Math.pow(z, 2.2);
+      [-1, 1].forEach(s => {
+        const xa = cx + s * (12 + p(z0) * w * .62), xb = cx + s * (12 + p(z1) * w * .62), ya = hy + p(z0) * (h - hy), yb = hy + p(z1) * (h - hy);
+        x.strokeStyle = i % 2 ? '#e8423a' : '#f1eee6'; x.lineWidth = 1 + p(z0) * 10; x.beginPath(); x.moveTo(xa, ya); x.lineTo(xb, yb); x.stroke();
+      });
+    }
+    // lane dashes
+    for (let i = 0; i < 10; i++) { const z = ((i / 10) + t * 1.2) % 1, p = Math.pow(z, 2.2); x.fillStyle = 'rgba(241,246,253,.6)'; x.fillRect(cx - 1 - p * 3, hy + p * (h - hy), 2 + p * 6, 4 + p * 26); }
+    // trails
+    cars.forEach(car => {
+      car.z += 0.008 + car.lane * 0.002; if (car.z > 1) car.z = 0.02;
+      const p = Math.pow(car.z, 2.2), side = (car.lane - 1.5) / 2, px = cx + side * p * w * .9, py = hy + p * (h - hy);
+      const len = 6 + p * 70; x.strokeStyle = car.warm ? 'rgba(253,175,109,.85)' : 'rgba(255,90,80,.75)'; x.lineWidth = .6 + p * 3;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(px - side * len * .25, py - len * .35); x.stroke();
+    });
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  frame();
+})();
+// B: replays
+const plays = {
+  b1() { const el = document.getElementById('b1'), wp = document.getElementById('warp'); wp.innerHTML = '';
+    for (let i = 0; i < 70; i++) { const s = document.createElement('i'); const a = Math.random() * 360; s.style.transform = 'rotate(' + a + 'deg) translateX(' + (10 + Math.random() * 40) + 'px)'; s.animate([{ width: '4px', opacity: 0 }, { width: (90 + Math.random() * 160) + 'px', opacity: 1 }], { duration: 1300, delay: 300 + Math.random() * 300, easing: 'cubic-bezier(.5,0,1,1)', fill: 'forwards' }); wp.appendChild(s); }
+    el.classList.remove('play'); void el.offsetWidth; el.classList.add('play'); },
+  b2() { const el = document.getElementById('b2'); el.classList.remove('play'); void el.offsetWidth; setTimeout(() => el.classList.add('play'), 400); },
+  b3() { const el = document.getElementById('b3'); el.classList.remove('play'); void el.offsetWidth; el.classList.add('play'); },
+  c1() { const el = document.getElementById('c1'), ls = [...el.querySelectorAll('.lights span')], go = el.querySelector('.go'), p = document.getElementById('c1p');
+    ls.forEach(s => s.querySelectorAll('i').forEach(i => i.classList.remove('on'))); go.classList.remove('show'); p.textContent = '0 / 5';
+    ls.forEach((s, k) => setTimeout(() => { s.querySelectorAll('i').forEach(i => i.classList.add('on')); p.textContent = (k + 1) + ' / 5'; }, 500 + k * 600));
+    setTimeout(() => { ls.forEach(s => s.querySelectorAll('i').forEach(i => i.classList.remove('on'))); go.classList.add('show'); p.textContent = 'pronto'; }, 500 + 5 * 600 + 500); },
+  c2() { const r = document.getElementById('c2run'), p = document.getElementById('c2p'); let v = 0; clearInterval(plays._c2);
+    plays._c2 = setInterval(() => { v = Math.min(100, v + 2 + Math.random() * 4); r.style.strokeDashoffset = 100 - v; p.textContent = Math.round(v) + '%'; if (v >= 100) clearInterval(plays._c2); }, 90); },
+  c3() { const t = document.getElementById('tower'); const m = [['GPT-6.1 Sol', '#facc6b'], ['GPT-6 Astra', '#aaa7ff'], ['Opus 5.5', '#ff99cc'], ['Gemini 4 Argon', '#8df0a4'], ['Fable 5.2', '#f4a1ed'], ['Gemini 4 Hydrogen', '#78dad1']];
+    t.innerHTML = m.map(([n, c]) => '<div><b style="background:' + c + '"></b><span>' + n + '</span><em>no grid</em></div>').join('');
+    [...t.children].forEach((d, i) => setTimeout(() => d.classList.add('on'), 400 + i * 380)); }
+};
+document.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => plays[b.dataset.play]()));
+['b1', 'b2', 'b3', 'c1', 'c2', 'c3'].forEach((k, i) => setTimeout(plays[k], 600 + i * 200));
+// B2 flag cells
+(() => { const f = document.getElementById('flag'); for (let i = 0; i < 84; i++) { const c = document.createElement('i'); const row = (i / 12) | 0; if ((row % 2) === 1) c.style.order = i; f.appendChild(c); } })();
+// D1 split letters
+document.querySelectorAll('[data-split]').forEach(el => { const t = el.textContent; el.textContent = ''; [...t].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch === ' ' ? ' ' : ch; s.style.transitionDelay = (i * 25) + 'ms'; el.appendChild(s); }); });
+// D3 decrypt
+(() => { const el = document.getElementById('d3'), final = el.textContent, cs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/'; let tm;
+  const run = () => { clearInterval(tm); let it = 0; el.classList.add('on');
+    tm = setInterval(() => { el.textContent = [...final].map((ch, i) => ch === ' ' ? ' ' : i < it / 2 ? ch : cs[(Math.random() * cs.length) | 0]).join(''); it++; if (it / 2 >= final.length) { clearInterval(tm); el.textContent = final; } }, 35); };
+  el.addEventListener('mouseenter', run); el.addEventListener('focus', run);
+  el.addEventListener('mouseleave', () => el.classList.remove('on')); el.addEventListener('blur', () => el.classList.remove('on')); })();
+</script>

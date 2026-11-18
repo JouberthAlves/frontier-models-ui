@@ -35,7 +35,7 @@ export const pt = {
     eyebrow: 'Benchmark 002',
     title: 'Racing-bench V3.4',
     intro:
-      'Cada modelo recebeu o mesmo prompt de 25 KB e 14 imagens de referência, e entregou um jogo de corrida 3D completo: um circuito costeiro com 5 oponentes de IA.',
+      'Cada modelo recebeu o mesmo prompt de corrida, com imagens de referência (V3.4; no Fable 5.2, a revisão V3.4.1), e entregou um jogo de corrida 3D completo: um circuito costeiro com 5 oponentes de IA.',
     scenes: 'Cenas',
     stage: (scene: string) => `Comparação da cena ${scene}`,
     play: 'Jogar',
