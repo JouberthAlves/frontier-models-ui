@@ -287,11 +287,12 @@
 .race-car__tyres {
   fill: #1d1f25;
 }
+/* Racing red with a white centre stripe (owner, 2026-11-18). */
 .race-car__paint {
-  fill: #fff3e3;
+  fill: #d8302a;
 }
 .race-car__stripe {
-  fill: #fdaf6d;
+  fill: #ffffff;
 }
 .race-car__glass {
   fill: #2a3140;

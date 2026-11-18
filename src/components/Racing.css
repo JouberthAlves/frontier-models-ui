@@ -35,7 +35,8 @@
 /* Finish line (measured by RaceMap), then the broken end of the road and a stretch of empty
    sky before the second hero (the slabs of road fall into it). */
 .racing__finish {
-  height: calc(260px + 24vh);
+  /* Room for the jump (the whole line of cars off the road) and the fall into the vortex. */
+  height: calc(260px + 24vh + 440px);
   margin-top: calc(var(--finish-gap) - var(--race-gap));
 }
 

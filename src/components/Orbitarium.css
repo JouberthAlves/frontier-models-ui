@@ -66,6 +66,36 @@
   height: 1px;
 }
 
+/* Phones and tablets: "Orbitarium" at the top of the screen, the galaxy filling the middle,
+   "bench" at the bottom — the nucleus never sits on a word. */
+@media (max-width: 1023px) {
+  .orbit-hero {
+    align-items: stretch;
+  }
+
+  .orbit-hero__shell {
+    display: flex;
+    padding-block: calc(var(--nav-h, 64px) + 28px) 120px;
+  }
+
+  .split-title {
+    display: flex;
+    flex: 1 1 auto;
+  }
+
+  .split-title__art {
+    flex: 1 1 auto;
+    gap: 0;
+  }
+
+  .split-title__core {
+    position: static;
+    flex: 1 1 auto;
+    align-self: center;
+    min-height: 40svh;
+  }
+}
+
 @media (min-width: 1024px) {
   .split-title {
     font-size: clamp(56px, 6.4vw, 96px);

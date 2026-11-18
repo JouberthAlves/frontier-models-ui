@@ -47,6 +47,9 @@ const VORTEX_PULL = 1.6;
 /** The car ends at this fraction of its size, and goes out over the last fifth of the fall. */
 const VORTEX_END_SCALE = 0.08;
 const VORTEX_FADE_FROM = 0.8;
+/** After the edge, every car first flies straight on (the jump) — until the last car has left the
+ *  road too, plus this much — and only then the vortex pulls it in (owner, 2026-11-18). */
+const JUMP_FREE_EXTRA = 170;
 const TINT_GOLD = [255, 196, 120] as const;
 const TINT_DUSK = [60, 70, 120] as const;
 const TINT_NIGHT = [16, 30, 53] as const;
@@ -406,9 +409,14 @@ export default function RaceMap() {
 
       // The fall lasts this many px of scroll per car: the last one reaches the nucleus about
       // when the second hero comes to rest under the nav (where the menu link scrolls to).
-      const fall = Math.max(360, core.y - jump.y + vh * 0.08 - carsSpan - NAV_H - 8);
+      // Straight flight first: long enough for the whole line of cars to be off the road.
+      const freePx = carsSpan + JUMP_FREE_EXTRA;
+      const fall = Math.max(360, core.y - jump.y + vh * 0.08 - carsSpan - NAV_H - 8 - freePx);
       const coreNow = coreAt(sy, vh);
       const onGrid = 1 - smooth((lead - gridLead) / 160);
+      const jumpRad = (jump.angle * Math.PI) / 180;
+      const dirX = Math.cos(jumpRad);
+      const dirY = Math.sin(jumpRad);
       for (let i = 0; i < count; i += 1) {
         const d = lead - i * CAR_SPACING;
         const car = cars[i];
@@ -417,7 +425,18 @@ export default function RaceMap() {
           flash(i, 0, 0, 0);
           continue;
         }
-        const u = clamp((d - jumpLen) / fall);
+        const free = d - jumpLen;
+        if (free <= freePx) {
+          // The jump: straight on from the broken edge, growing a little as it leaves the ramp.
+          const jx = jump.x + dirX * free;
+          const jy = jump.y + dirY * free;
+          const lift = 1 + 0.38 * Math.sin(Math.PI * Math.min(1, free / 180));
+          car.style.transform = `translate3d(${jx.toFixed(1)}px,${jy.toFixed(1)}px,0) rotate(${(jump.angle - 90).toFixed(1)}deg) scale(${(scale * lift).toFixed(3)})`;
+          car.style.opacity = '1';
+          flash(i, 0, 0, 0);
+          continue;
+        }
+        const u = clamp((free - freePx) / fall);
         // A short white flash in the nucleus as the car goes out.
         flash(i, core.x, coreNow, (u - 0.86) / 0.14);
         if (u >= 1) {
@@ -427,8 +446,11 @@ export default function RaceMap() {
         // A spiral around the nucleus, in polar coordinates. It starts at the edge of the road
         // (radius and angle of that point as seen from the nucleus when this car jumped), the
         // radius closes and the angle runs faster and faster, the way the galaxy turns.
-        const vx = jump.x - core.x;
-        const vy = jump.y - coreAt(sy - (d - jumpLen), vh);
+        // The spiral starts where the jump ended.
+        const startX = jump.x + dirX * freePx;
+        const startY = jump.y + dirY * freePx;
+        const vx = startX - core.x;
+        const vy = startY - coreAt(sy - (free - freePx), vh);
         const r0 = Math.hypot(vx, vy) || 1;
         const theta = Math.atan2(vy, vx) + VORTEX_TURNS * 2 * Math.PI * Math.pow(u, 1.5);
         const r = r0 * Math.pow(1 - u, VORTEX_PULL);
@@ -437,9 +459,9 @@ export default function RaceMap() {
         const y = coreNow + Math.sin(theta) * r;
         // Nose: straight ahead as it jumps, then towards the nucleus, then along the spiral.
         const along = (theta * 180) / Math.PI + 180 - 90 * smooth(u / 0.45);
-        const heading = mix(90, along, smooth(u / 0.15));
-        // The jump: the car grows a little as it leaves the edge, then shrinks all the way in.
-        const size = scale * mix(1, VORTEX_END_SCALE, smooth(u)) * (1 + 0.38 * Math.sin(Math.PI * Math.min(1, u / 0.2)));
+        const heading = mix(jump.angle, along, smooth(u / 0.15));
+        // Shrinks all the way into the nucleus.
+        const size = scale * mix(1, VORTEX_END_SCALE, smooth(u));
         car.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${(heading - 90).toFixed(1)}deg) scale(${size.toFixed(3)})`;
         car.style.opacity = (1 - clamp((u - VORTEX_FADE_FROM) / (1 - VORTEX_FADE_FROM))).toFixed(3);
       }
