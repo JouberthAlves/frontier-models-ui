@@ -36,7 +36,7 @@ export default function Hero() {
               <StrokeText
                 lines={TITLE_LINES}
                 strokeColor="var(--ink-navy)"
-                fill="var(--ink-navy)"
+                fill="#ffffff"
                 onMeasure={onMeasure}
                 trigger="controlled"
                 play={ignited}
@@ -48,7 +48,7 @@ export default function Hero() {
                 fillDuration={0.8}
                 fillEase="power2.inOut"
                 fillMode="wipe"
-                strokeWidth={3}
+                strokeWidth={16}
                 fontWeight={900}
                 fontStretch={125}
                 letterSpacing={-4}

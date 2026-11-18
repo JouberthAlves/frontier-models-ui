@@ -122,9 +122,11 @@ void main() {
       rest += vec2(sin(uTime * 0.3 + aMeta.z), cos(uTime * 0.27 + aMeta.z * 1.7)) * (2.0 + 4.0 * depth);
       px = mix(px, rest, settle);
       // A fine star field: smaller, dimmer (the far ones more), twinkling.
-      size = mix(size, max(1.0, size * 0.55), settle);
-      float star = 0.45 * mix(0.3, 1.0, depth * depth) * (0.8 + 0.2 * sin(uTime * (0.4 + depth) + aMeta.z));
-      alpha *= mix(1.0, star, settle);
+      // Clearly visible after the explosion (owner, 2026-11-18): every star gets its own brightness,
+      // not the faint one it had as galaxy dust, and stays at least 1.6 px.
+      size = mix(size, max(1.6, size * 0.75), settle);
+      float star = mix(0.55, 1.0, depth) * (0.82 + 0.18 * sin(uTime * (0.4 + depth) + aMeta.z));
+      alpha = mix(alpha, star, settle);
     }
     clip = vec2(px.x / uRes.x * 2.0 - 1.0, 1.0 - px.y / uRes.y * 2.0);
   }
