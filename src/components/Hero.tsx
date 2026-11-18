@@ -54,7 +54,6 @@ export default function Hero() {
                 letterSpacing={-4}
               />
             </span>
-            <span className="hero__underline" aria-hidden="true" />
           </h1>
 
           <p className="hero__lede">
