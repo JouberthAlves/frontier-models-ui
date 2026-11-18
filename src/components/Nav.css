@@ -5,6 +5,22 @@
   right: 0;
   z-index: 40;
   isolation: isolate;
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 220ms ease;
+}
+
+/* At the very top: no bar. It slides in on the first scroll, and with the keyboard on focus. */
+.nav.is-top:not(:focus-within) {
+  transform: translateY(calc(-100% - env(safe-area-inset-top)));
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav {
+    transition: none;
+  }
 }
 
 .nav::before {
