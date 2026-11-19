@@ -33,9 +33,9 @@ export const pt = {
   },
   racing: {
     eyebrow: 'Benchmark 002',
-    title: 'Racing-bench V3.4',
+    title: 'Racing-bench V3.4 / V3.5',
     intro:
-      'Cada modelo recebeu o mesmo prompt de corrida, com imagens de referência (V3.4; no GPT-6.2 Astra e no Fable 5.2, a revisão V3.4.1), e entregou um jogo de corrida 3D completo: um circuito costeiro com 5 oponentes de IA.',
+      'Cada modelo recebeu o prompt de corrida com 14 imagens de referência (V3.4 no Opus 5.5 e no Gemini 4 Hydrogen; a revisão V3.4.1 no GPT-6.2 Astra e no Fable 5.2; a V3.5 no GPT-6.2 Sol e no Gemini 4 Neon) e entregou um jogo de corrida 3D completo: um circuito costeiro com 5 oponentes de IA.',
     scenes: 'Cenas',
     stage: (scene: string) => `Comparação da cena ${scene}`,
     play: 'Jogar',

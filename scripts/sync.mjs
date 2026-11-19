@@ -2,7 +2,7 @@
 // Sync script: reads the Frontier Models fork READ-ONLY (git show / git ls-tree at a pinned
 // commit) and writes src/data/archive.json + public/scenes/<runId>/s<N>-{640,1600}.webp.
 //
-// Usage: npm run sync -- --fork ../Frontiers-Models --commit 1bd3430
+// Usage: npm run sync -- --fork ../Frontiers-Models --commit 2405490
 // Nothing is ever written inside the fork.
 
 import { execFileSync } from 'node:child_process';
@@ -13,7 +13,7 @@ import sharp from 'sharp';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_FORK = '../Frontiers-Models';
-const DEFAULT_COMMIT = '1bd3430e3c6f24500f363f956a51bf66e34a0ca0';
+const DEFAULT_COMMIT = '2405490041d6819e29e871f9bc82a422a25099f5';
 const REPO = 'JouberthAlves/Frontiers-Models';
 const MAX_BUFFER = 64 * 1024 * 1024;
 

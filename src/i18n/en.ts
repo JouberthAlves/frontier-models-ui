@@ -35,9 +35,9 @@ export const en: Dict = {
   },
   racing: {
     eyebrow: 'Benchmark 002',
-    title: 'Racing-bench V3.4',
+    title: 'Racing-bench V3.4 / V3.5',
     intro:
-      'Every model got the same racing prompt with reference images (V3.4; for GPT-6.2 Astra and Fable 5.2, the V3.4.1 revision), and shipped a complete 3D racing game: a coastal circuit with 5 AI opponents.',
+      'Every model got the racing prompt with 14 reference images (V3.4 for Opus 5.5 and Gemini 4 Hydrogen; the V3.4.1 revision for GPT-6.2 Astra and Fable 5.2; V3.5 for GPT-6.2 Sol and Gemini 4 Neon), and shipped a complete 3D racing game: a coastal circuit with 5 AI opponents.',
     scenes: 'Scenes',
     stage: (scene: string) => `Comparison for scene ${scene}`,
     play: 'Play',
